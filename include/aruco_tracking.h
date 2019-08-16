@@ -31,8 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /* Author: Jan Bacik */
 
-#ifndef ARUCO_MAPPING_H
-#define ARUCO_MAPPING_H
+#ifndef ARUCO_TRACKING_H
+#define ARUCO_TRACKING_H
 
 // Standard ROS libraries
 #include <ros/ros.h>
@@ -57,14 +57,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <opencv2/highgui/highgui.hpp>
 
 // Custom message
-#include <aruco_mapping/ArucoMarker.h>
+#include <aruco_tracking/ArucoMarker.h>
 
 /** \brief Aruco mapping namespace */
-namespace aruco_mapping
+namespace aruco_tracking
 {
 
 /** \brief Client class for Aruco mapping */
-class ArucoMapping
+class ArucoTracking
 {
 public:
 
@@ -86,9 +86,9 @@ public:
 public:
 
   /** \brief Construct a client for EZN64 USB control*/
-  ArucoMapping(ros::NodeHandle *nh);
+  ArucoTracking(ros::NodeHandle *nh);
 
-  ~ArucoMapping();
+  ~ArucoTracking();
 
   /** \brief Callback function to handle image processing*/
   void imageCallback(const sensor_msgs::ImageConstPtr &original_image);

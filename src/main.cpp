@@ -33,20 +33,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include    <ros/ros.h>
 #include    <image_transport/image_transport.h>
-#include    <aruco_mapping.h>
+#include    <aruco_tracking.h>
 
 int
 main(int argc, char **argv)
 {
-  ros::init(argc,argv,"aruco_mapping");
+  ros::init(argc,argv,"aruco_tracking");
   ros::NodeHandle nh;
       
   // Aruco mapping object
-  aruco_mapping::ArucoMapping obj(&nh);
+  aruco_tracking::ArucoTracking obj(&nh);
 
   // Image node and subscriber
   image_transport::ImageTransport it(nh);
-  image_transport::Subscriber img_sub = it.subscribe("/image_raw", 1, &aruco_mapping::ArucoMapping::imageCallback, &obj);
+  image_transport::Subscriber img_sub = it.subscribe("/image_raw", 1, &aruco_tracking::ArucoTracking::imageCallback, &obj);
 
   ros::spin();
 
