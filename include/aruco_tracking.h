@@ -166,7 +166,7 @@ private:
 
    static constexpr double THIS_IS_FIRST_MARKER = -2;
 
-}; //ArucoMapping class
+}; //ArucoTracking class
 }  //aruco_mapping namespace
 
 #endif //ARUCO_MAPPING_H
