@@ -21,9 +21,9 @@ include_directories(${PROJECT_SOURCE_DIR}/src/)
 
 
 SET(SOURCES ${PROJECT_SOURCE_DIR}/src/main.cpp
-            ${PROJECT_SOURCE_DIR}/src/aruco_mapping.cpp)
+            ${PROJECT_SOURCE_DIR}/src/aruco_tracking.cpp)
    
-SET(HEADERS ${PROJECT_SOURCE_DIR}/include/aruco_mapping.h)
+SET(HEADERS ${PROJECT_SOURCE_DIR}/include/aruco_tracking.h)
 
 add_message_files(FILES ArucoMarker.msg)
 

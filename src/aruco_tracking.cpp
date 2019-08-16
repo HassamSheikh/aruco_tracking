@@ -31,15 +31,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /* Author: Jan Bacik */
 
-#ifndef ARUCO_MAPPING_CPP
-#define ARUCO_MAPPING_CPP
+#ifndef ARUCO_TRACKING_CPP
+#define ARUCO_TRACKING_CPP
 
-#include <aruco_mapping.h>
+#include <aruco_tracking.h>
 
-namespace aruco_mapping
+namespace aruco_tracking
 {
 
-ArucoMapping::ArucoMapping(ros::NodeHandle *nh) :
+ArucoTracking::ArucoTracking(ros::NodeHandle *nh) :
   listener_ (new tf::TransformListener),  // Initialize TF Listener  
   num_of_markers_ (10),                   // Number of used markers
   marker_size_(0.1),                      // Marker size in m
@@ -55,15 +55,15 @@ ArucoMapping::ArucoMapping(ros::NodeHandle *nh) :
   double temp_marker_size;  
   
   //Parse params from launch file 
-  nh->getParam("/aruco_mapping/calibration_file", calib_filename_);
-  nh->getParam("/aruco_mapping/marker_size", temp_marker_size); 
-  nh->getParam("/aruco_mapping/num_of_markers", num_of_markers_);
-  nh->getParam("/aruco_maping/space_type",space_type_);
-  nh->getParam("/aruco_mapping/roi_allowed",roi_allowed_);
-  nh->getParam("/aruco_mapping/roi_x",roi_x_);
-  nh->getParam("/aruco_mapping/roi_y",roi_y_);
-  nh->getParam("/aruco_mapping/roi_w",roi_w_);
-  nh->getParam("/aruco_mapping/roi_h",roi_h_);
+  nh->getParam("/aruco_tracking/calibration_file", calib_filename_);
+  nh->getParam("/aruco_tracking/marker_size", temp_marker_size); 
+  nh->getParam("/aruco_tracking/num_of_markers", num_of_markers_);
+  nh->getParam("/aruco_tracking/space_type",space_type_);
+  nh->getParam("/aruco_tracking/roi_allowed",roi_allowed_);
+  nh->getParam("/aruco_tracking/roi_x",roi_x_);
+  nh->getParam("/aruco_tracking/roi_y",roi_y_);
+  nh->getParam("/aruco_tracking/roi_w",roi_w_);
+  nh->getParam("/aruco_tracking/roi_h",roi_h_);
      
   // Double to float conversion
   marker_size_ = float(temp_marker_size);
@@ -84,7 +84,7 @@ ArucoMapping::ArucoMapping(ros::NodeHandle *nh) :
   }
     
   //ROS publishers
-  marker_msg_pub_           = nh->advertise<aruco_mapping::ArucoMarker>("aruco_poses",1);
+  marker_msg_pub_           = nh->advertise<aruco_tracking::ArucoMarker>("aruco_poses",1);
   marker_visualization_pub_ = nh->advertise<visualization_msgs::Marker>("aruco_markers",1);
            
   //Parse data from calibration file
@@ -105,13 +105,13 @@ ArucoMapping::ArucoMapping(ros::NodeHandle *nh) :
   }
 }
 
-ArucoMapping::~ArucoMapping()
+ArucoTracking::~ArucoTracking()
 {
  delete listener_;
 }
 
 bool
-ArucoMapping::parseCalibrationFile(std::string calib_filename)
+ArucoTracking::parseCalibrationFile(std::string calib_filename)
 {
   sensor_msgs::CameraInfo camera_calibration_data;
   std::string camera_name = "camera";
@@ -156,7 +156,7 @@ ArucoMapping::parseCalibrationFile(std::string calib_filename)
 }
 
 void
-ArucoMapping::imageCallback(const sensor_msgs::ImageConstPtr &original_image)
+ArucoTracking::imageCallback(const sensor_msgs::ImageConstPtr &original_image)
 {
   //Create cv_brigde instance
   cv_bridge::CvImagePtr cv_ptr;
@@ -187,7 +187,7 @@ ArucoMapping::imageCallback(const sensor_msgs::ImageConstPtr &original_image)
 
 
 bool
-ArucoMapping::processImage(cv::Mat input_image,cv::Mat output_image)
+ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
 {
   aruco::MarkerDetector Detector;
   std::vector<aruco::Marker> real_time_markers;
@@ -241,6 +241,7 @@ ArucoMapping::processImage(cv::Mat input_image,cv::Mat output_image)
       ROS_DEBUG_STREAM("New marker with ID: " << current_marker_id << " found");
     }
 
+<<<<<<< HEAD:src/aruco_mapping.cpp
     // // Change visibility flag of new marker
     markVisible(real_time_markers);
    
@@ -435,39 +436,241 @@ ArucoMapping::processImage(cv::Mat input_image,cv::Mat output_image)
     //   markers_[index].geometry_msg_to_world.orientation.z = marker_quaternion.getZ();
     //   markers_[index].geometry_msg_to_world.orientation.w = marker_quaternion.getW();
     // }
+=======
+    // Change visibility flag of new marker
+    for(size_t j = 0;j < global_marker_counter_; j++)
+    {
+      for(size_t k = 0;k < real_time_markers.size(); k++)
+      {
+        if(markers_[j].marker_id == real_time_markers[k].id)
+          markers_[j].visible = true;
+      }
+    }
+    ROS_DEBUG_STREAM("Current Value of INDEX: " << index << " found");
+    //------------------------------------------------------
+    // For existing marker do
+    //------------------------------------------------------
+    if((index < global_marker_counter_) && (first_marker_detected_ == true))
+    {
+      markers_[index].current_camera_tf = arucoMarker2Tf(real_time_markers[i]);
+      markers_[index].current_camera_tf = markers_[index].current_camera_tf.inverse();
+
+      const tf::Vector3 marker_origin = markers_[index].current_camera_tf.getOrigin();
+      markers_[index].current_camera_pose.position.x = marker_origin.getX();
+      markers_[index].current_camera_pose.position.y = marker_origin.getY();
+      markers_[index].current_camera_pose.position.z = marker_origin.getZ();
+
+      const tf::Quaternion marker_quaternion = markers_[index].current_camera_tf.getRotation();
+      markers_[index].current_camera_pose.orientation.x = marker_quaternion.getX();
+      markers_[index].current_camera_pose.orientation.y = marker_quaternion.getY();
+      markers_[index].current_camera_pose.orientation.z = marker_quaternion.getZ();
+      markers_[index].current_camera_pose.orientation.w = marker_quaternion.getW();
+    }
+
+    //------------------------------------------------------
+    // For new marker do
+    //------------------------------------------------------
+    if((index == global_marker_counter_) && (first_marker_detected_ == true))
+    {
+      markers_[index].current_camera_tf=arucoMarker2Tf(real_time_markers[i]);
+
+      tf::Vector3 marker_origin = markers_[index].current_camera_tf.getOrigin();
+      markers_[index].current_camera_pose.position.x = marker_origin.getX();
+      markers_[index].current_camera_pose.position.y = marker_origin.getY();
+      markers_[index].current_camera_pose.position.z = marker_origin.getZ();
+
+      tf::Quaternion marker_quaternion = markers_[index].current_camera_tf.getRotation();
+      markers_[index].current_camera_pose.orientation.x = marker_quaternion.getX();
+      markers_[index].current_camera_pose.orientation.y = marker_quaternion.getY();
+      markers_[index].current_camera_pose.orientation.z = marker_quaternion.getZ();
+      markers_[index].current_camera_pose.orientation.w = marker_quaternion.getW();
+
+      // Naming - TFs
+      std::stringstream camera_tf_id;
+      std::stringstream camera_tf_id_old;
+      std::stringstream marker_tf_id_old;
+
+      camera_tf_id << "camera_" << index;
+
+      // Flag to keep info if any_known marker_visible in actual image
+      bool any_known_marker_visible = false;
+
+      // Array ID of markers, which position of new marker is calculated
+      int last_marker_id;
+
+      // Testing, if is possible calculate position of a new marker to old known marker
+      for(int k = 0; k < index; k++)
+      {
+        if((markers_[k].visible == true) && (any_known_marker_visible == false))
+        {
+          if(markers_[k].previous_marker_id != -1)
+          {
+            any_known_marker_visible = true;
+            camera_tf_id_old << "camera_" << k;
+            marker_tf_id_old << "marker_" << k;
+            markers_[index].previous_marker_id = k;
+            last_marker_id = k;
+           }
+         }
+       }
+
+     // New position can be calculated
+     if(any_known_marker_visible == true)
+     {
+       // Generating TFs for listener
+       for(char k = 0; k < 10; k++)
+       {
+         // TF from old marker and its camera
+         broadcaster_.sendTransform(tf::StampedTransform(markers_[last_marker_id].current_camera_tf,ros::Time::now(),
+                                                         marker_tf_id_old.str(),camera_tf_id_old.str()));
+
+         // TF from old camera to new camera
+         broadcaster_.sendTransform(tf::StampedTransform(markers_[index].current_camera_tf,ros::Time::now(),
+                                                         camera_tf_id_old.str(),camera_tf_id.str()));
+
+         ros::Duration(BROADCAST_WAIT_INTERVAL).sleep();
+       }
+
+        // Calculate TF between two markers
+        listener_->waitForTransform(marker_tf_id_old.str(),camera_tf_id.str(),ros::Time(0),
+                                    ros::Duration(WAIT_FOR_TRANSFORM_INTERVAL));
+        try
+        {
+          broadcaster_.sendTransform(tf::StampedTransform(markers_[last_marker_id].current_camera_tf,ros::Time::now(),
+                                                          marker_tf_id_old.str(),camera_tf_id_old.str()));
+
+          broadcaster_.sendTransform(tf::StampedTransform(markers_[index].current_camera_tf,ros::Time::now(),
+                                                          camera_tf_id_old.str(),camera_tf_id.str()));
+
+          listener_->lookupTransform(marker_tf_id_old.str(),camera_tf_id.str(),ros::Time(0),
+                                     markers_[index].tf_to_previous);
+        }
+        catch(tf::TransformException &e)
+        {
+          ROS_ERROR("Not able to lookup transform");
+        }
+
+        // Save origin and quaternion of calculated TF
+        marker_origin = markers_[index].tf_to_previous.getOrigin();
+        marker_quaternion = markers_[index].tf_to_previous.getRotation();
+
+        // If plane type selected roll, pitch and Z axis are zero
+        if(space_type_ == "plane")
+        {
+          double roll, pitch, yaw;
+          tf::Matrix3x3(marker_quaternion).getRPY(roll,pitch,yaw);
+          roll = 0;
+          pitch = 0;
+          marker_origin.setZ(0);
+          marker_quaternion.setRPY(pitch,roll,yaw);
+        }
+
+        markers_[index].tf_to_previous.setRotation(marker_quaternion);
+        markers_[index].tf_to_previous.setOrigin(marker_origin);
+
+        marker_origin = markers_[index].tf_to_previous.getOrigin();
+        markers_[index].geometry_msg_to_previous.position.x = marker_origin.getX();
+        markers_[index].geometry_msg_to_previous.position.y = marker_origin.getY();
+        markers_[index].geometry_msg_to_previous.position.z = marker_origin.getZ();
+
+        marker_quaternion = markers_[index].tf_to_previous.getRotation();
+        markers_[index].geometry_msg_to_previous.orientation.x = marker_quaternion.getX();
+        markers_[index].geometry_msg_to_previous.orientation.y = marker_quaternion.getY();
+        markers_[index].geometry_msg_to_previous.orientation.z = marker_quaternion.getZ();
+        markers_[index].geometry_msg_to_previous.orientation.w = marker_quaternion.getW();
+
+        // increase marker count
+        global_marker_counter_++;
+
+        // Invert and position of new marker to compute camera pose above it
+        markers_[index].current_camera_tf = markers_[index].current_camera_tf.inverse();
+
+        marker_origin = markers_[index].current_camera_tf.getOrigin();
+        markers_[index].current_camera_pose.position.x = marker_origin.getX();
+        markers_[index].current_camera_pose.position.y = marker_origin.getY();
+        markers_[index].current_camera_pose.position.z = marker_origin.getZ();
+
+        marker_quaternion = markers_[index].current_camera_tf.getRotation();
+        markers_[index].current_camera_pose.orientation.x = marker_quaternion.getX();
+        markers_[index].current_camera_pose.orientation.y = marker_quaternion.getY();
+        markers_[index].current_camera_pose.orientation.z = marker_quaternion.getZ();
+        markers_[index].current_camera_pose.orientation.w = marker_quaternion.getW();
+
+        // Publish all TFs and markers
+        publishTfs(false);
+      }
+    }
+
+    //------------------------------------------------------
+    // Compute global position of new marker
+    //------------------------------------------------------
+    if((global_marker_counter_previous_ < global_marker_counter_) && (first_marker_detected_ == true))
+    {
+      // Publish all TF five times for listener
+      for(char k = 0; k < 5; k++)
+        publishTfs(false);
+
+      std::stringstream marker_tf_name;
+      marker_tf_name << "marker_" << index;
+
+      listener_->waitForTransform("world",marker_tf_name.str(),ros::Time(0),
+                                  ros::Duration(WAIT_FOR_TRANSFORM_INTERVAL));
+      try
+      {
+        listener_->lookupTransform("world",marker_tf_name.str(),ros::Time(0),
+                                   markers_[index].tf_to_world);
+      }
+      catch(tf::TransformException &e)
+      {
+        ROS_ERROR("Not able to lookup transform");
+      }
+
+      // Saving TF to Pose
+      const tf::Vector3 marker_origin = markers_[index].tf_to_world.getOrigin();
+      markers_[index].geometry_msg_to_world.position.x = marker_origin.getX();
+      markers_[index].geometry_msg_to_world.position.y = marker_origin.getY();
+      markers_[index].geometry_msg_to_world.position.z = marker_origin.getZ();
+
+      tf::Quaternion marker_quaternion=markers_[index].tf_to_world.getRotation();
+      markers_[index].geometry_msg_to_world.orientation.x = marker_quaternion.getX();
+      markers_[index].geometry_msg_to_world.orientation.y = marker_quaternion.getY();
+      markers_[index].geometry_msg_to_world.orientation.z = marker_quaternion.getZ();
+      markers_[index].geometry_msg_to_world.orientation.w = marker_quaternion.getW();
+    }
+>>>>>>> 15bcd3613c5743ea6947a1b88266e12034a4361f:src/aruco_tracking.cpp
   }
 
   //------------------------------------------------------
   // Compute which of visible markers is the closest to the camera
   //------------------------------------------------------
-  // bool any_markers_visible=false;
-  // int num_of_visible_markers=0;
+  bool any_markers_visible=false;
+  int num_of_visible_markers=0;
 
-  // if(first_marker_detected_ == true)
-  // {
-  //   double minimal_distance = INIT_MIN_SIZE_VALUE;
-  //   for(int k = 0; k < num_of_markers_; k++)
-  //   {
-  //     double a,b,c,size;
+  if(first_marker_detected_ == true)
+  {
+    double minimal_distance = INIT_MIN_SIZE_VALUE;
+    for(int k = 0; k < num_of_markers_; k++)
+    {
+      double a,b,c,size;
 
-  //     // If marker is visible, distance is calculated
-  //     if(markers_[k].visible==true)
-  //     {
-  //       a = markers_[k].current_camera_pose.position.x;
-  //       b = markers_[k].current_camera_pose.position.y;
-  //       c = markers_[k].current_camera_pose.position.z;
-  //       size = std::sqrt((a * a) + (b * b) + (c * c));
-  //       if(size < minimal_distance)
-  //       {
-  //         minimal_distance = size;
-  //         closest_camera_index_ = k;
-  //       }
+      // If marker is visible, distance is calculated
+      if(markers_[k].visible==true)
+      {
+        a = markers_[k].current_camera_pose.position.x;
+        b = markers_[k].current_camera_pose.position.y;
+        c = markers_[k].current_camera_pose.position.z;
+        size = std::sqrt((a * a) + (b * b) + (c * c));
+        if(size < minimal_distance)
+        {
+          minimal_distance = size;
+          closest_camera_index_ = k;
+        }
 
-  //       any_markers_visible = true;
-  //       num_of_visible_markers++;
-  //     }
-  //   }
-  // }
+        any_markers_visible = true;
+        num_of_visible_markers++;
+      }
+    }
+  }
 
   //------------------------------------------------------
   // Publish all known markers
@@ -478,77 +681,77 @@ ArucoMapping::processImage(cv::Mat input_image,cv::Mat output_image)
   //------------------------------------------------------
   // Compute global camera pose
   //------------------------------------------------------
-  // if((first_marker_detected_ == true) && (any_markers_visible == true))
-  // {
-  //   std::stringstream closest_camera_tf_name;
-  //   closest_camera_tf_name << "camera_" << closest_camera_index_;
+  if((first_marker_detected_ == true) && (any_markers_visible == true))
+  {
+    std::stringstream closest_camera_tf_name;
+    closest_camera_tf_name << "camera_" << closest_camera_index_;
 
-  //   listener_->waitForTransform("world",closest_camera_tf_name.str(),ros::Time(0),
-  //                               ros::Duration(WAIT_FOR_TRANSFORM_INTERVAL));
-  //   try
-  //   {
-  //     listener_->lookupTransform("world",closest_camera_tf_name.str(),ros::Time(0),
-  //                                world_position_transform_);
-  //   }
-  //   catch(tf::TransformException &ex)
-  //   {
-  //     ROS_ERROR("Not able to lookup transform");
-  //   }
+    listener_->waitForTransform("world",closest_camera_tf_name.str(),ros::Time(0),
+                                ros::Duration(WAIT_FOR_TRANSFORM_INTERVAL));
+    try
+    {
+      listener_->lookupTransform("world",closest_camera_tf_name.str(),ros::Time(0),
+                                 world_position_transform_);
+    }
+    catch(tf::TransformException &ex)
+    {
+      ROS_ERROR("Not able to lookup transform");
+    }
 
-  //   // Saving TF to Pose
-  //   const tf::Vector3 marker_origin = world_position_transform_.getOrigin();
-  //   world_position_geometry_msg_.position.x = marker_origin.getX();
-  //   world_position_geometry_msg_.position.y = marker_origin.getY();
-  //   world_position_geometry_msg_.position.z = marker_origin.getZ();
+    // Saving TF to Pose
+    const tf::Vector3 marker_origin = world_position_transform_.getOrigin();
+    world_position_geometry_msg_.position.x = marker_origin.getX();
+    world_position_geometry_msg_.position.y = marker_origin.getY();
+    world_position_geometry_msg_.position.z = marker_origin.getZ();
 
-  //   tf::Quaternion marker_quaternion = world_position_transform_.getRotation();
-  //   world_position_geometry_msg_.orientation.x = marker_quaternion.getX();
-  //   world_position_geometry_msg_.orientation.y = marker_quaternion.getY();
-  //   world_position_geometry_msg_.orientation.z = marker_quaternion.getZ();
-  //   world_position_geometry_msg_.orientation.w = marker_quaternion.getW();
-  // }
+    tf::Quaternion marker_quaternion = world_position_transform_.getRotation();
+    world_position_geometry_msg_.orientation.x = marker_quaternion.getX();
+    world_position_geometry_msg_.orientation.y = marker_quaternion.getY();
+    world_position_geometry_msg_.orientation.z = marker_quaternion.getZ();
+    world_position_geometry_msg_.orientation.w = marker_quaternion.getW();
+  }
 
   //------------------------------------------------------
   // Publish all known markers
   //------------------------------------------------------
-  // if(first_marker_detected_ == true)
-  //   publishTfs(true);
+  if(first_marker_detected_ == true)
+    publishTfs(true);
 
   //------------------------------------------------------
   // Publish custom marker message
   //------------------------------------------------------
-  // aruco_mapping::ArucoMarker marker_msg;
+  aruco_tracking::ArucoMarker marker_msg;
 
-  // if((any_markers_visible == true))
-  // {
-  //   marker_msg.header.stamp = ros::Time::now();
-  //   marker_msg.header.frame_id = "world";
-  //   marker_msg.marker_visibile = true;
-  //   marker_msg.num_of_visible_markers = num_of_visible_markers;
-  //   marker_msg.global_camera_pose = world_position_geometry_msg_;
-  //   marker_msg.marker_ids.clear();
-  //   marker_msg.global_marker_poses.clear();
-  //   for(size_t j = 0; j < global_marker_counter_; j++)
-  //   {
-  //     if(markers_[j].visible == true)
-  //     {
-  //       marker_msg.marker_ids.push_back(markers_[j].marker_id);
-  //       marker_msg.global_marker_poses.push_back(markers_[j].geometry_msg_to_world);       
-  //     }
-  //   }
-  // }
-  // else
-  // {
-  //   marker_msg.header.stamp = ros::Time::now();
-  //   marker_msg.header.frame_id = "world";
-  //   marker_msg.num_of_visible_markers = num_of_visible_markers;
-  //   marker_msg.marker_visibile = false;
-  //   marker_msg.marker_ids.clear();
-  //   marker_msg.global_marker_poses.clear();
-  // }
+  if((any_markers_visible == true))
+  {
+    marker_msg.header.stamp = ros::Time::now();
+    marker_msg.header.frame_id = "world";
+    marker_msg.marker_visibile = true;
+    marker_msg.num_of_visible_markers = num_of_visible_markers;
+    marker_msg.global_camera_pose = world_position_geometry_msg_;
+    marker_msg.marker_ids.clear();
+    marker_msg.global_marker_poses.clear();
+    for(size_t j = 0; j < global_marker_counter_; j++)
+    {
+      if(markers_[j].visible == true)
+      {
+        marker_msg.marker_ids.push_back(markers_[j].marker_id);
+        marker_msg.global_marker_poses.push_back(markers_[j].geometry_msg_to_world);       
+      }
+    }
+  }
+  else
+  {
+    marker_msg.header.stamp = ros::Time::now();
+    marker_msg.header.frame_id = "world";
+    marker_msg.num_of_visible_markers = num_of_visible_markers;
+    marker_msg.marker_visibile = false;
+    marker_msg.marker_ids.clear();
+    marker_msg.global_marker_poses.clear();
+  }
 
-  // // Publish custom marker msg
-  // marker_msg_pub_.publish(marker_msg);
+  // Publish custom marker msg
+  marker_msg_pub_.publish(marker_msg);
 
   return true;
 }
@@ -655,7 +858,7 @@ ArucoMapping::detectFirstMarker(std::vector<aruco::Marker> &real_time_markers)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 void
-ArucoMapping::publishTfs(bool world_option)
+ArucoTracking::publishTfs(bool world_option)
 {
   for(int i = 0; i < global_marker_counter_; i++)
   {
@@ -695,7 +898,7 @@ ArucoMapping::publishTfs(bool world_option)
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 void
-ArucoMapping::publishMarker(geometry_msgs::Pose marker_pose, int marker_id, int index)
+ArucoTracking::publishMarker(geometry_msgs::Pose marker_pose, int marker_id, int index)
 {
   visualization_msgs::Marker vis_marker;
 
@@ -732,7 +935,7 @@ ArucoMapping::publishMarker(geometry_msgs::Pose marker_pose, int marker_id, int 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 tf::Transform
-ArucoMapping::arucoMarker2Tf(const aruco::Marker &marker)
+ArucoTracking::arucoMarker2Tf(const aruco::Marker &marker)
 {
   cv::Mat marker_rotation(3,3, CV_32FC1);
   cv::Rodrigues(marker.Rvec, marker_rotation);
