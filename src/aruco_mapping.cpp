@@ -211,70 +211,7 @@ ArucoMapping::processImage(cv::Mat input_image,cv::Mat output_image)
   //------------------------------------------------------
   if((real_time_markers.size() > 0) && (first_marker_detected_ == false))
   {
-    //Set flag
-    first_marker_detected_=true;
-
-    // Detect lowest marker ID
-    lowest_marker_id_ = real_time_markers[0].id;
-    for(size_t i = 0; i < real_time_markers.size();i++)
-    {
-      if(real_time_markers[i].id < lowest_marker_id_)
-        lowest_marker_id_ = real_time_markers[i].id;
-    }
-
-
-    ROS_DEBUG_STREAM("The lowest Id marker " << lowest_marker_id_ );
-
-    // Identify lowest marker ID with world's origin
-    markers_[0].marker_id = lowest_marker_id_;
-
-    markers_[0].geometry_msg_to_world.position.x = 0;
-    markers_[0].geometry_msg_to_world.position.y = 0;
-    markers_[0].geometry_msg_to_world.position.z = 0;
-
-    markers_[0].geometry_msg_to_world.orientation.x = 0;
-    markers_[0].geometry_msg_to_world.orientation.y = 0;
-    markers_[0].geometry_msg_to_world.orientation.z = 0;
-    markers_[0].geometry_msg_to_world.orientation.w = 1;
-
-    // Relative position and Global position
-    markers_[0].geometry_msg_to_previous.position.x = 0;
-    markers_[0].geometry_msg_to_previous.position.y = 0;
-    markers_[0].geometry_msg_to_previous.position.z = 0;
-
-    markers_[0].geometry_msg_to_previous.orientation.x = 0;
-    markers_[0].geometry_msg_to_previous.orientation.y = 0;
-    markers_[0].geometry_msg_to_previous.orientation.z = 0;
-    markers_[0].geometry_msg_to_previous.orientation.w = 1;
-
-    // Transformation Pose to TF
-    tf::Vector3 position;
-    position.setX(0);
-    position.setY(0);
-    position.setZ(0);
-
-    tf::Quaternion rotation;
-    rotation.setX(0);
-    rotation.setY(0);
-    rotation.setZ(0);
-    rotation.setW(1);
-
-    markers_[0].tf_to_previous.setOrigin(position);
-    markers_[0].tf_to_previous.setRotation(rotation);
-
-    // Relative position of first marker equals Global position
-    markers_[0].tf_to_world=markers_[0].tf_to_previous;
-
-    // Increase count
-    global_marker_counter_++;
-
-    // Set sign of visibility of first marker
-    markers_[0].visible=true;
-
-    ROS_INFO_STREAM("First marker with ID: " << markers_[0].marker_id << " detected");
-
-    //First marker does not have any previous marker
-    markers_[0].previous_marker_id = THIS_IS_FIRST_MARKER;
+    detectFirstMarker(real_time_markers);
   }
 
   //------------------------------------------------------
@@ -291,20 +228,12 @@ ArucoMapping::processImage(cv::Mat input_image,cv::Mat output_image)
     aruco::CvDrawingUtils::draw3dAxis(output_image,real_time_markers[i], aruco_calib_params_);
 
     // Existing marker ?
-    bool existing = false;
-    int temp_counter = 0;
-    while((existing == false) && (temp_counter < global_marker_counter_))
+    bool existing = isDetected(current_marker_id);
+    if(existing)
     {
-      if(markers_[temp_counter].marker_id == current_marker_id)
-      {
-        index = temp_counter;
-        existing = true;
-        ROS_DEBUG_STREAM("Existing marker with ID: " << current_marker_id << "found");
-      }
-        temp_counter++;
+       ROS_DEBUG_STREAM("Existing marker with ID: " << current_marker_id << " found");
     }
-    // //New marker ?
-    if(existing == false)
+    else // //New marker ?
     {
       index = global_marker_counter_;
       markers_[index].marker_id = current_marker_id;
@@ -312,16 +241,10 @@ ArucoMapping::processImage(cv::Mat input_image,cv::Mat output_image)
       ROS_DEBUG_STREAM("New marker with ID: " << current_marker_id << " found");
     }
 
-    // Change visibility flag of new marker
-    for(size_t j = 0;j < global_marker_counter_; j++)
-    {
-      for(size_t k = 0;k < real_time_markers.size(); k++)
-      {
-        if(markers_[j].marker_id == real_time_markers[k].id)
-          markers_[j].visible = true;
-      }
-    }
-    ROS_DEBUG_STREAM("Current Value of INDEX: " << index << " found");
+    // // Change visibility flag of new marker
+    markVisible(real_time_markers);
+   
+    // ROS_DEBUG_STREAM("Current Value of INDEX: " << index << " found");
     // //------------------------------------------------------
     // // For existing marker do
     // //------------------------------------------------------
@@ -632,6 +555,105 @@ ArucoMapping::processImage(cv::Mat input_image,cv::Mat output_image)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
+bool
+ArucoMapping::isDetected(int marker_id)
+{
+  bool existing = false;
+  int temp_counter = 0;
+  while((existing == false) && (temp_counter < global_marker_counter_))
+  {
+    if(markers_[temp_counter].marker_id == marker_id)
+    {
+      existing = true;
+    }
+    temp_counter++;
+  }
+  return existing;
+}
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+void
+ArucoMapping::markVisible(std::vector<aruco::Marker> &real_time_markers)
+{
+  for(size_t j = 0;j < global_marker_counter_; j++)
+  {
+    for(size_t k = 0;k < real_time_markers.size(); k++)
+    {
+      if(markers_[j].marker_id == real_time_markers[k].id)
+        markers_[j].visible = true;
+        break;
+      }
+    }
+}
+//////////////////////////////////////////////////////////////////////////
+
+void
+ArucoMapping::detectFirstMarker(std::vector<aruco::Marker> &real_time_markers)
+{
+  first_marker_detected_=true;
+  lowest_marker_id_ = real_time_markers[0].id;
+  for(size_t i = 0; i < real_time_markers.size();i++)
+  {
+    if(real_time_markers[i].id < lowest_marker_id_)
+      lowest_marker_id_ = real_time_markers[i].id;
+  }
+
+
+  ROS_DEBUG_STREAM("The lowest Id marker " << lowest_marker_id_ );
+
+  // Identify lowest marker ID with world's origin
+  markers_[0].marker_id = lowest_marker_id_;
+
+  markers_[0].geometry_msg_to_world.position.x = 0;
+  markers_[0].geometry_msg_to_world.position.y = 0;
+  markers_[0].geometry_msg_to_world.position.z = 0;
+
+  markers_[0].geometry_msg_to_world.orientation.x = 0;
+  markers_[0].geometry_msg_to_world.orientation.y = 0;
+  markers_[0].geometry_msg_to_world.orientation.z = 0;
+  markers_[0].geometry_msg_to_world.orientation.w = 1;
+
+  // Relative position and Global position
+  markers_[0].geometry_msg_to_previous.position.x = 0;
+  markers_[0].geometry_msg_to_previous.position.y = 0;
+  markers_[0].geometry_msg_to_previous.position.z = 0;
+
+  markers_[0].geometry_msg_to_previous.orientation.x = 0;
+  markers_[0].geometry_msg_to_previous.orientation.y = 0;
+  markers_[0].geometry_msg_to_previous.orientation.z = 0;
+  markers_[0].geometry_msg_to_previous.orientation.w = 1;
+
+  // Transformation Pose to TF
+  tf::Vector3 position;
+  position.setX(0);
+  position.setY(0);
+  position.setZ(0);
+
+  tf::Quaternion rotation;
+  rotation.setX(0);
+  rotation.setY(0);
+  rotation.setZ(0);
+  rotation.setW(1);
+
+  markers_[0].tf_to_previous.setOrigin(position);
+  markers_[0].tf_to_previous.setRotation(rotation);
+
+  // Relative position of first marker equals Global position
+  markers_[0].tf_to_world=markers_[0].tf_to_previous;
+
+  // Increase count
+  global_marker_counter_++;
+
+  // Set sign of visibility of first marker
+  markers_[0].visible=true;
+
+  ROS_INFO_STREAM("First marker with ID: " << markers_[0].marker_id << " detected");
+
+  //First marker does not have any previous marker
+  markers_[0].previous_marker_id = THIS_IS_FIRST_MARKER;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
 void
 ArucoMapping::publishTfs(bool world_option)
 {

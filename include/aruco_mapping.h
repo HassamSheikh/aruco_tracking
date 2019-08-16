@@ -117,6 +117,9 @@ private:
 
   /** \brief Process actual image, detect markers and compute poses */
   bool processImage(cv::Mat input_image,cv::Mat output_image);
+  bool isDetected(int marker_id);
+  void detectFirstMarker(std::vector<aruco::Marker> &real_time_markers);
+  void markVisible(std::vector<aruco::Marker> &real_time_markers);
 
   //Launch file params
   std::string calib_filename_;
