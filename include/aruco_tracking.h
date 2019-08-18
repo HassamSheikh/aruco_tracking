@@ -121,6 +121,7 @@ private:
   void detectFirstMarker(std::vector<aruco::Marker> &real_time_markers);
   void markVisible(std::vector<aruco::Marker> &real_time_markers);
   void setCurrentCameraPose(aruco::Marker &real_time_marker, int index);
+  void publishCustomMarker(bool any_markers_visible, int num_of_visible_markers);
 
   //Launch file params
   std::string calib_filename_;

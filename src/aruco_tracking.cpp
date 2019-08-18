@@ -236,35 +236,7 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
       setCurrentCameraPose(real_time_markers[i], index);
     } 
     
-    // bool existing = false;
-    // int temp_counter = 0;
-    // while((existing == false) && (temp_counter < global_marker_counter_))
-    // {
-    //   if(markers_[temp_counter].marker_id == current_marker_id)
-    //   {
-    //     index = temp_counter;
-    //     existing = true;
-    //     ROS_DEBUG_STREAM("Existing marker with ID: " << current_marker_id << "found");
-    //     if((index < global_marker_counter_) && (first_marker_detected_ == true))
-    //     {
-    //       markers_[index].current_camera_tf = arucoMarker2Tf(real_time_markers[i]);
-    //       markers_[index].current_camera_tf = markers_[index].current_camera_tf.inverse();
-
-    //       const tf::Vector3 marker_origin = markers_[index].current_camera_tf.getOrigin();
-    //       markers_[index].current_camera_pose.position.x = marker_origin.getX();
-    //       markers_[index].current_camera_pose.position.y = marker_origin.getY();
-    //       markers_[index].current_camera_pose.position.z = marker_origin.getZ();
-
-    //       const tf::Quaternion marker_quaternion = markers_[index].current_camera_tf.getRotation();
-    //       markers_[index].current_camera_pose.orientation.x = marker_quaternion.getX();
-    //       markers_[index].current_camera_pose.orientation.y = marker_quaternion.getY();
-    //       markers_[index].current_camera_pose.orientation.z = marker_quaternion.getZ();
-    //       markers_[index].current_camera_pose.orientation.w = marker_quaternion.getW();
-    //     }
-    //   }
-    //     temp_counter++;
-    // }
-    // //New marker ?
+    /// new marker
     if(index == -1)
     {
       index = global_marker_counter_;
@@ -275,32 +247,18 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
 
     // Change visibility flag of new marker
     markVisible(real_time_markers);
-    //------------------------------------------------------
-    // For existing marker do
-    //------------------------------------------------------
-    // if((index < global_marker_counter_) && (first_marker_detected_ == true))
-    // {
-    //   markers_[index].current_camera_tf = arucoMarker2Tf(real_time_markers[i]);
-    //   markers_[index].current_camera_tf = markers_[index].current_camera_tf.inverse();
-
-    //   const tf::Vector3 marker_origin = markers_[index].current_camera_tf.getOrigin();
-    //   markers_[index].current_camera_pose.position.x = marker_origin.getX();
-    //   markers_[index].current_camera_pose.position.y = marker_origin.getY();
-    //   markers_[index].current_camera_pose.position.z = marker_origin.getZ();
-
-    //   const tf::Quaternion marker_quaternion = markers_[index].current_camera_tf.getRotation();
-    //   markers_[index].current_camera_pose.orientation.x = marker_quaternion.getX();
-    //   markers_[index].current_camera_pose.orientation.y = marker_quaternion.getY();
-    //   markers_[index].current_camera_pose.orientation.z = marker_quaternion.getZ();
-    //   markers_[index].current_camera_pose.orientation.w = marker_quaternion.getW();
+    //   for(size_t j = 0;j < global_marker_counter_; j++)
+    //   {
+    //     for(size_t k = 0;k < real_time_markers.size(); k++)
+    //     {
+    //       if(markers_[j].marker_id == real_time_markers[k].id)
+    //         markers_[j].visible = true;
+    //   }
     // }
-
-    //------------------------------------------------------
-    // For new marker do
-    //------------------------------------------------------
+    //------------ ------------------------------------------
     if((index == global_marker_counter_) && (first_marker_detected_ == true))
     {
-      markers_[index].current_camera_tf=arucoMarker2Tf(real_time_markers[i]);
+     markers_[index].current_camera_tf=arucoMarker2Tf(real_time_markers[i]);
 
       tf::Vector3 marker_origin = markers_[index].current_camera_tf.getOrigin();
       markers_[index].current_camera_pose.position.x = marker_origin.getX();
@@ -312,6 +270,7 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
       markers_[index].current_camera_pose.orientation.y = marker_quaternion.getY();
       markers_[index].current_camera_pose.orientation.z = marker_quaternion.getZ();
       markers_[index].current_camera_pose.orientation.w = marker_quaternion.getW();
+      //setCurrentCameraPose(real_time_markers[i], index);
 
       // Naming - TFs
       std::stringstream camera_tf_id;
@@ -547,8 +506,48 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   //------------------------------------------------------
   // Publish custom marker message
   //------------------------------------------------------
-  aruco_tracking::ArucoMarker marker_msg;
+  // aruco_tracking::ArucoMarker marker_msg;
+  publishCustomMarker(any_markers_visible, num_of_visible_markers);
+  // if((any_markers_visible == true))
+  // {
+  //   marker_msg.header.stamp = ros::Time::now();
+  //   marker_msg.header.frame_id = "world";
+  //   marker_msg.marker_visibile = true;
+  //   marker_msg.num_of_visible_markers = num_of_visible_markers;
+  //   marker_msg.global_camera_pose = world_position_geometry_msg_;
+  //   marker_msg.marker_ids.clear();
+  //   marker_msg.global_marker_poses.clear();
+  //   for(size_t j = 0; j < global_marker_counter_; j++)
+  //   {
+  //     if(markers_[j].visible == true)
+  //     {
+  //       marker_msg.marker_ids.push_back(markers_[j].marker_id);
+  //       marker_msg.global_marker_poses.push_back(markers_[j].geometry_msg_to_world);       
+  //     }
+  //   }
+  // }
+  // else
+  // {
+  //   marker_msg.header.stamp = ros::Time::now();
+  //   marker_msg.header.frame_id = "world";
+  //   marker_msg.num_of_visible_markers = num_of_visible_markers;
+  //   marker_msg.marker_visibile = false;
+  //   marker_msg.marker_ids.clear();
+  //   marker_msg.global_marker_poses.clear();
+  // }
 
+  // // Publish custom marker msg
+  // marker_msg_pub_.publish(marker_msg);
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+void 
+ArucoTracking::publishCustomMarker(bool any_markers_visible, int num_of_visible_markers)
+{
+  aruco_tracking::ArucoMarker marker_msg;
   if((any_markers_visible == true))
   {
     marker_msg.header.stamp = ros::Time::now();
@@ -579,12 +578,7 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
 
   // Publish custom marker msg
   marker_msg_pub_.publish(marker_msg);
-
-  return true;
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 void
 ArucoTracking::detectFirstMarker(std::vector<aruco::Marker> &real_time_markers)
@@ -681,7 +675,6 @@ ArucoTracking::markVisible(std::vector<aruco::Marker> &real_time_markers)
     {
       if(markers_[j].marker_id == real_time_markers[k].id)
         markers_[j].visible = true;
-        break;
       }
     }
 }
