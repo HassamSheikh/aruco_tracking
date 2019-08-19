@@ -40,23 +40,23 @@ namespace aruco_tracking
 {
 
 ArucoTracking::ArucoTracking(ros::NodeHandle *nh) :
-  listener_ (new tf::TransformListener),  // Initialize TF Listener  
+  listener_ (new tf::TransformListener),  // Initialize TF Listener
   num_of_markers_ (10),                   // Number of used markers
   marker_size_(0.1),                      // Marker size in m
   calib_filename_("empty"),               // Calibration filepath
-  space_type_ ("plane"),                  // Space type - 2D plane 
+  space_type_ ("plane"),                  // Space type - 2D plane
   roi_allowed_ (false),                   // ROI not allowed by default
   first_marker_detected_(false),          // First marker not detected by defualt
   lowest_marker_id_(-1),                  // Lowest marker ID
   global_marker_counter_(0),                     // Reset marker counter
-  closest_camera_index_(0)                // Reset closest camera index 
-  
+  closest_camera_index_(0)                // Reset closest camera index
+
 {
-  double temp_marker_size;  
-  
-  //Parse params from launch file 
+  double temp_marker_size;
+
+  //Parse params from launch file
   nh->getParam("/aruco_tracking/calibration_file", calib_filename_);
-  nh->getParam("/aruco_tracking/marker_size", temp_marker_size); 
+  nh->getParam("/aruco_tracking/marker_size", temp_marker_size);
   nh->getParam("/aruco_tracking/num_of_markers", num_of_markers_);
   nh->getParam("/aruco_tracking/space_type",space_type_);
   nh->getParam("/aruco_tracking/roi_allowed",roi_allowed_);
@@ -64,10 +64,10 @@ ArucoTracking::ArucoTracking(ros::NodeHandle *nh) :
   nh->getParam("/aruco_tracking/roi_y",roi_y_);
   nh->getParam("/aruco_tracking/roi_w",roi_w_);
   nh->getParam("/aruco_tracking/roi_h",roi_h_);
-     
+
   // Double to float conversion
   marker_size_ = float(temp_marker_size);
-  
+
   if(calib_filename_ == "empty")
     ROS_WARN("Calibration filename empty! Check the launch file paths");
   else
@@ -80,22 +80,22 @@ ArucoTracking::ArucoTracking(ros::NodeHandle *nh) :
     ROS_INFO_STREAM("ROI x-coor: " << roi_x_);
     ROS_INFO_STREAM("ROI y-coor: " << roi_x_);
     ROS_INFO_STREAM("ROI width: "  << roi_w_);
-    ROS_INFO_STREAM("ROI height: " << roi_h_);      
+    ROS_INFO_STREAM("ROI height: " << roi_h_);
   }
-    
+
   //ROS publishers
   marker_msg_pub_           = nh->advertise<aruco_tracking::ArucoMarker>("aruco_poses",1);
   marker_visualization_pub_ = nh->advertise<visualization_msgs::Marker>("aruco_markers",1);
-           
+
   //Parse data from calibration file
   parseCalibrationFile(calib_filename_);
 
   //Initialize OpenCV window
-  cv::namedWindow("Mono8", CV_WINDOW_AUTOSIZE);       
-      
+  cv::namedWindow("Mono8", CV_WINDOW_AUTOSIZE);
+
   //Resize marker container
   markers_.resize(num_of_markers_);
-  
+
   // Default markers_ initialization
   for(size_t i = 0; i < num_of_markers_;i++)
   {
@@ -169,20 +169,20 @@ ArucoTracking::imageCallback(const sensor_msgs::ImageConstPtr &original_image)
     ROS_ERROR("Not able to convert sensor_msgs::Image to OpenCV::Mat format %s", e.what());
     return;
   }
-  
+
   // sensor_msgs::Image to OpenCV Mat structure
   cv::Mat I = cv_ptr->image;
-  
+
   // region of interest
   if(roi_allowed_==true)
     I = cv_ptr->image(cv::Rect(roi_x_,roi_y_,roi_w_,roi_h_));
 
   //Marker detection
   processImage(I,I);
-  
+
   // Show image
   cv::imshow("Mono8", I);
-  cv::waitKey(10);  
+  cv::waitKey(10);
 }
 
 
@@ -201,7 +201,7 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
 
   // Detect markers
   Detector.detect(input_image,real_time_markers,aruco_calib_params_,marker_size_);
-    
+
   // If no marker found, print statement
   if(real_time_markers.size() == 0)
     ROS_DEBUG("No marker found!");
@@ -210,7 +210,7 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   // FIRST MARKER DETECTED
   //------------------------------------------------------
   if((real_time_markers.size() > 0) && (first_marker_detected_ == false))
-  { 
+  {
     first_marker_detected_=true;
     detectFirstMarker(real_time_markers);
   }
@@ -228,14 +228,14 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
     aruco::CvDrawingUtils::draw3dCube(output_image,real_time_markers[i], aruco_calib_params_);
     aruco::CvDrawingUtils::draw3dAxis(output_image,real_time_markers[i], aruco_calib_params_);
 
-    // // Existing marker ? 
+    // // Existing marker ?
     index = isDetected(current_marker_id);
     if(index != -1)
     {
       ROS_DEBUG_STREAM("Existing marker with ID: " << current_marker_id << "found");
       setCurrentCameraPose(real_time_markers[i], index);
-    } 
-    
+    }
+
     /// new marker
     if(index == -1)
     {
@@ -247,14 +247,6 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
 
     // Change visibility flag of new marker
     markVisible(real_time_markers);
-    //   for(size_t j = 0;j < global_marker_counter_; j++)
-    //   {
-    //     for(size_t k = 0;k < real_time_markers.size(); k++)
-    //     {
-    //       if(markers_[j].marker_id == real_time_markers[k].id)
-    //         markers_[j].visible = true;
-    //   }
-    // }
     //------------ ------------------------------------------
     if((index == global_marker_counter_) && (first_marker_detected_ == true))
     {
@@ -431,42 +423,31 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   //------------------------------------------------------
   bool any_markers_visible=false;
   int num_of_visible_markers=0;
-
-  if(first_marker_detected_ == true)
-  {
-    double minimal_distance = INIT_MIN_SIZE_VALUE;
-    for(int k = 0; k < num_of_markers_; k++)
-    {
-      double a,b,c,size;
-
-      // If marker is visible, distance is calculated
-      if(markers_[k].visible==true)
-      {
-        a = markers_[k].current_camera_pose.position.x;
-        b = markers_[k].current_camera_pose.position.y;
-        c = markers_[k].current_camera_pose.position.z;
-        size = std::sqrt((a * a) + (b * b) + (c * c));
-        if(size < minimal_distance)
-        {
-          minimal_distance = size;
-          closest_camera_index_ = k;
-        }
-
-        any_markers_visible = true;
-        num_of_visible_markers++;
-      }
-    }
-  }
-
-  //------------------------------------------------------
-  // Publish all known markers
-  //------------------------------------------------------
-  // if(first_marker_detected_ == true)
-  //   publishTfs(true);
+  nearestMarkersToCamera(any_markers_visible, num_of_visible_markers);
 
   //------------------------------------------------------
   // Compute global camera pose
   //------------------------------------------------------
+  computeGlobalCameraPose(any_markers_visible);
+
+  //------------------------------------------------------
+  // Publish all known markers
+  //------------------------------------------------------
+  if(first_marker_detected_ == true)
+    publishTfs(true);
+
+  //------------------------------------------------------
+  // Publish custom marker message
+  //------------------------------------------------------
+  publishCustomMarker(any_markers_visible, num_of_visible_markers);
+
+  return true;
+}
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+void
+ArucoTracking::computeGlobalCameraPose(bool any_markers_visible)
+{
   if((first_marker_detected_ == true) && (any_markers_visible == true))
   {
     std::stringstream closest_camera_tf_name;
@@ -496,55 +477,41 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
     world_position_geometry_msg_.orientation.z = marker_quaternion.getZ();
     world_position_geometry_msg_.orientation.w = marker_quaternion.getW();
   }
+}
+/////////////////////////////////////////////////////////////
 
-  //------------------------------------------------------
-  // Publish all known markers
-  //------------------------------------------------------
+
+void
+ArucoTracking::nearestMarkersToCamera(bool &any_markers_visible, int &num_of_visible_markers)
+{
   if(first_marker_detected_ == true)
-    publishTfs(true);
+  {
+    double minimal_distance = INIT_MIN_SIZE_VALUE;
+    for(int k = 0; k < num_of_markers_; k++)
+    {
+      double a,b,c,size;
 
-  //------------------------------------------------------
-  // Publish custom marker message
-  //------------------------------------------------------
-  // aruco_tracking::ArucoMarker marker_msg;
-  publishCustomMarker(any_markers_visible, num_of_visible_markers);
-  // if((any_markers_visible == true))
-  // {
-  //   marker_msg.header.stamp = ros::Time::now();
-  //   marker_msg.header.frame_id = "world";
-  //   marker_msg.marker_visibile = true;
-  //   marker_msg.num_of_visible_markers = num_of_visible_markers;
-  //   marker_msg.global_camera_pose = world_position_geometry_msg_;
-  //   marker_msg.marker_ids.clear();
-  //   marker_msg.global_marker_poses.clear();
-  //   for(size_t j = 0; j < global_marker_counter_; j++)
-  //   {
-  //     if(markers_[j].visible == true)
-  //     {
-  //       marker_msg.marker_ids.push_back(markers_[j].marker_id);
-  //       marker_msg.global_marker_poses.push_back(markers_[j].geometry_msg_to_world);       
-  //     }
-  //   }
-  // }
-  // else
-  // {
-  //   marker_msg.header.stamp = ros::Time::now();
-  //   marker_msg.header.frame_id = "world";
-  //   marker_msg.num_of_visible_markers = num_of_visible_markers;
-  //   marker_msg.marker_visibile = false;
-  //   marker_msg.marker_ids.clear();
-  //   marker_msg.global_marker_poses.clear();
-  // }
+      // If marker is visible, distance is calculated
+      if(markers_[k].visible==true)
+      {
+        a = markers_[k].current_camera_pose.position.x;
+        b = markers_[k].current_camera_pose.position.y;
+        c = markers_[k].current_camera_pose.position.z;
+        size = std::sqrt((a * a) + (b * b) + (c * c));
+        if(size < minimal_distance)
+        {
+          minimal_distance = size;
+          closest_camera_index_ = k;
+        }
 
-  // // Publish custom marker msg
-  // marker_msg_pub_.publish(marker_msg);
-
-  return true;
+        any_markers_visible = true;
+        num_of_visible_markers++;
+      }
+    }
+  }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////
-
-void 
+void
 ArucoTracking::publishCustomMarker(bool any_markers_visible, int num_of_visible_markers)
 {
   aruco_tracking::ArucoMarker marker_msg;
@@ -562,7 +529,7 @@ ArucoTracking::publishCustomMarker(bool any_markers_visible, int num_of_visible_
       if(markers_[j].visible == true)
       {
         marker_msg.marker_ids.push_back(markers_[j].marker_id);
-        marker_msg.global_marker_poses.push_back(markers_[j].geometry_msg_to_world);       
+        marker_msg.global_marker_poses.push_back(markers_[j].geometry_msg_to_world);
       }
     }
   }
@@ -645,7 +612,7 @@ ArucoTracking::detectFirstMarker(std::vector<aruco::Marker> &real_time_markers)
 /////////////////////////////////////////////////////////////////////////////
 
 
-void 
+void
 ArucoTracking::setCurrentCameraPose(aruco::Marker &real_time_marker, int index)
 {
   if (first_marker_detected_ == true)
@@ -663,7 +630,7 @@ ArucoTracking::setCurrentCameraPose(aruco::Marker &real_time_marker, int index)
     markers_[index].current_camera_pose.orientation.y = marker_quaternion.getY();
     markers_[index].current_camera_pose.orientation.z = marker_quaternion.getZ();
     markers_[index].current_camera_pose.orientation.w = marker_quaternion.getW();
-  } 
+  }
 }
 
 void
