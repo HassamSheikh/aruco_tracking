@@ -233,7 +233,7 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
     if(index != -1)
     {
       ROS_DEBUG_STREAM("Existing marker with ID: " << current_marker_id << "found");
-      setCurrentCameraPose(real_time_markers[i], index);
+      setCurrentCameraPose(real_time_markers[i], index, true);
     }
 
     /// new marker
@@ -253,16 +253,16 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
      markers_[index].current_camera_tf=arucoMarker2Tf(real_time_markers[i]);
 
       tf::Vector3 marker_origin = markers_[index].current_camera_tf.getOrigin();
-      markers_[index].current_camera_pose.position.x = marker_origin.getX();
-      markers_[index].current_camera_pose.position.y = marker_origin.getY();
-      markers_[index].current_camera_pose.position.z = marker_origin.getZ();
-
+      // markers_[index].current_camera_pose.position.x = marker_origin.getX();
+      // markers_[index].current_camera_pose.position.y = marker_origin.getY();
+      // markers_[index].current_camera_pose.position.z = marker_origin.getZ();
+      //
       tf::Quaternion marker_quaternion = markers_[index].current_camera_tf.getRotation();
-      markers_[index].current_camera_pose.orientation.x = marker_quaternion.getX();
-      markers_[index].current_camera_pose.orientation.y = marker_quaternion.getY();
-      markers_[index].current_camera_pose.orientation.z = marker_quaternion.getZ();
-      markers_[index].current_camera_pose.orientation.w = marker_quaternion.getW();
-      //setCurrentCameraPose(real_time_markers[i], index);
+      // markers_[index].current_camera_pose.orientation.x = marker_quaternion.getX();
+      // markers_[index].current_camera_pose.orientation.y = marker_quaternion.getY();
+      // markers_[index].current_camera_pose.orientation.z = marker_quaternion.getZ();
+      // markers_[index].current_camera_pose.orientation.w = marker_quaternion.getW();
+      setCurrentCameraPose(real_time_markers[i], index, false);
 
       // Naming - TFs
       std::stringstream camera_tf_id;
@@ -613,13 +613,15 @@ ArucoTracking::detectFirstMarker(std::vector<aruco::Marker> &real_time_markers)
 
 
 void
-ArucoTracking::setCurrentCameraPose(aruco::Marker &real_time_marker, int index)
+ArucoTracking::setCurrentCameraPose(aruco::Marker &real_time_marker, int index, bool inverse)
 {
   if (first_marker_detected_ == true)
   {
     markers_[index].current_camera_tf = arucoMarker2Tf(real_time_marker);
-    markers_[index].current_camera_tf = markers_[index].current_camera_tf.inverse();
-
+    if(inverse)
+    {
+      markers_[index].current_camera_tf = markers_[index].current_camera_tf.inverse();
+    }
     const tf::Vector3 marker_origin = markers_[index].current_camera_tf.getOrigin();
     markers_[index].current_camera_pose.position.x = marker_origin.getX();
     markers_[index].current_camera_pose.position.y = marker_origin.getY();
@@ -760,7 +762,7 @@ ArucoTracking::arucoMarker2Tf(const aruco::Marker &marker)
   rotate_to_ros.at<float>(2,1) = 1.0;
   rotate_to_ros.at<float>(2,2) = 0.0;
 
-  marker_rotation = marker_rotation * rotate_to_ros.t();
+  marker_rotation = marker_rotation * rotate_to_ros;//.t();
 
   // Origin solution
   tf::Matrix3x3 marker_tf_rot(marker_rotation.at<float>(0,0),marker_rotation.at<float>(0,1),marker_rotation.at<float>(0,2),

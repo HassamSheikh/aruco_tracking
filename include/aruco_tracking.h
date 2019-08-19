@@ -120,7 +120,7 @@ private:
   int isDetected(int marker_id);
   void detectFirstMarker(std::vector<aruco::Marker> &real_time_markers);
   void markVisible(std::vector<aruco::Marker> &real_time_markers);
-  void setCurrentCameraPose(aruco::Marker &real_time_marker, int index);
+  void setCurrentCameraPose(aruco::Marker &real_time_marker, int index, bool inverse);
   void publishCustomMarker(bool any_markers_visible, int num_of_visible_markers);
   void computeGlobalCameraPose(bool any_markers_visible);
   void nearestMarkersToCamera(bool &any_markers_visible, int &num_of_visible_markers);
