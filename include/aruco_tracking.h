@@ -123,6 +123,7 @@ private:
   void setCurrentCameraPose(aruco::Marker &real_time_marker, int index, bool inverse);
   void publishCustomMarker(bool any_markers_visible, int num_of_visible_markers);
   void computeGlobalCameraPose(bool any_markers_visible);
+  void computeGlobalMarkerPose(int index);
   void nearestMarkersToCamera(bool &any_markers_visible, int &num_of_visible_markers);
 
   //Launch file params

@@ -280,16 +280,14 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
       // Testing, if is possible calculate position of a new marker to old known marker
       for(int k = 0; k < index; k++)
       {
-        if((markers_[k].visible == true) && (any_known_marker_visible == false))
+        if((markers_[k].visible == true) && (any_known_marker_visible == false) &&markers_[k].previous_marker_id != -1)
         {
-          if(markers_[k].previous_marker_id != -1)
-          {
-            any_known_marker_visible = true;
-            camera_tf_id_old << "camera_" << k;
-            marker_tf_id_old << "marker_" << k;
-            markers_[index].previous_marker_id = k;
-            last_marker_id = k;
-           }
+          any_known_marker_visible = true;
+          camera_tf_id_old << "camera_" << k;
+          marker_tf_id_old << "marker_" << k;
+          markers_[index].previous_marker_id = k;
+          last_marker_id = k;
+         
          }
        }
 
@@ -383,39 +381,7 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
     //------------------------------------------------------
     // Compute global position of new marker
     //------------------------------------------------------
-    if((global_marker_counter_previous_ < global_marker_counter_) && (first_marker_detected_ == true))
-    {
-      // Publish all TF five times for listener
-      for(char k = 0; k < 5; k++)
-        publishTfs(false);
-
-      std::stringstream marker_tf_name;
-      marker_tf_name << "marker_" << index;
-
-      listener_->waitForTransform("world",marker_tf_name.str(),ros::Time(0),
-                                  ros::Duration(WAIT_FOR_TRANSFORM_INTERVAL));
-      try
-      {
-        listener_->lookupTransform("world",marker_tf_name.str(),ros::Time(0),
-                                   markers_[index].tf_to_world);
-      }
-      catch(tf::TransformException &e)
-      {
-        ROS_ERROR("Not able to lookup transform");
-      }
-
-      // Saving TF to Pose
-      const tf::Vector3 marker_origin = markers_[index].tf_to_world.getOrigin();
-      markers_[index].geometry_msg_to_world.position.x = marker_origin.getX();
-      markers_[index].geometry_msg_to_world.position.y = marker_origin.getY();
-      markers_[index].geometry_msg_to_world.position.z = marker_origin.getZ();
-
-      tf::Quaternion marker_quaternion=markers_[index].tf_to_world.getRotation();
-      markers_[index].geometry_msg_to_world.orientation.x = marker_quaternion.getX();
-      markers_[index].geometry_msg_to_world.orientation.y = marker_quaternion.getY();
-      markers_[index].geometry_msg_to_world.orientation.z = marker_quaternion.getZ();
-      markers_[index].geometry_msg_to_world.orientation.w = marker_quaternion.getW();
-    }
+      computeGlobalMarkerPose(index);
   }
 
   //------------------------------------------------------
@@ -444,7 +410,44 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   return true;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
+void
+ArucoTracking::computeGlobalMarkerPose(int index)
+{
+  if((global_marker_counter_previous_ < global_marker_counter_) && (first_marker_detected_ == true))
+  {
+    // Publish all TF five times for listener
+    for(char k = 0; k < 5; k++)
+      publishTfs(false);
 
+    std::stringstream marker_tf_name;
+    marker_tf_name << "marker_" << index;
+
+    listener_->waitForTransform("world",marker_tf_name.str(),ros::Time(0),
+                                ros::Duration(WAIT_FOR_TRANSFORM_INTERVAL));
+    try
+    {
+      listener_->lookupTransform("world",marker_tf_name.str(),ros::Time(0),
+                                 markers_[index].tf_to_world);
+    }
+    catch(tf::TransformException &e)
+    {
+      ROS_ERROR("Not able to lookup transform");
+    }
+
+    // Saving TF to Pose
+    const tf::Vector3 marker_origin = markers_[index].tf_to_world.getOrigin();
+    markers_[index].geometry_msg_to_world.position.x = marker_origin.getX();
+    markers_[index].geometry_msg_to_world.position.y = marker_origin.getY();
+    markers_[index].geometry_msg_to_world.position.z = marker_origin.getZ();
+
+    tf::Quaternion marker_quaternion=markers_[index].tf_to_world.getRotation();
+    markers_[index].geometry_msg_to_world.orientation.x = marker_quaternion.getX();
+    markers_[index].geometry_msg_to_world.orientation.y = marker_quaternion.getY();
+    markers_[index].geometry_msg_to_world.orientation.z = marker_quaternion.getZ();
+    markers_[index].geometry_msg_to_world.orientation.w = marker_quaternion.getW();
+  }
+}
+///////////////////////////////////////////////////////////////////////////////
 void
 ArucoTracking::computeGlobalCameraPose(bool any_markers_visible)
 {
