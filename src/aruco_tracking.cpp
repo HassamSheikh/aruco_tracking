@@ -269,7 +269,6 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
       std::stringstream camera_tf_id_old;
       std::stringstream marker_tf_id_old;
 
-      camera_tf_id << "camera_" << index;
 
       // Flag to keep info if any_known marker_visible in actual image
       bool any_known_marker_visible = false;
@@ -279,43 +278,13 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
 
       // Testing, if is possible calculate position of a new marker to old known marker
       knownMarkerInImage(any_known_marker_visible, last_marker_id, index);
-      camera_tf_id_old << "camera_" << last_marker_id;
-      marker_tf_id_old << "marker_" << last_marker_id;
+
      // New position can be calculated
      if(any_known_marker_visible == true)
      {
        // Generating TFs for listener
-       for(char k = 0; k < 10; k++)
-       {
-         // TF from old marker and its camera
-         broadcaster_.sendTransform(tf::StampedTransform(markers_[last_marker_id].current_camera_tf,ros::Time::now(),
-                                                         marker_tf_id_old.str(),camera_tf_id_old.str()));
+       publishCameraMarkerTransforms(index, last_marker_id);
 
-         // TF from old camera to new camera
-         broadcaster_.sendTransform(tf::StampedTransform(markers_[index].current_camera_tf,ros::Time::now(),
-                                                         camera_tf_id_old.str(),camera_tf_id.str()));
-
-         ros::Duration(BROADCAST_WAIT_INTERVAL).sleep();
-       }
-
-        // Calculate TF between two markers
-        listener_->waitForTransform(marker_tf_id_old.str(),camera_tf_id.str(),ros::Time(0),
-                                    ros::Duration(WAIT_FOR_TRANSFORM_INTERVAL));
-        try
-        {
-          broadcaster_.sendTransform(tf::StampedTransform(markers_[last_marker_id].current_camera_tf,ros::Time::now(),
-                                                          marker_tf_id_old.str(),camera_tf_id_old.str()));
-
-          broadcaster_.sendTransform(tf::StampedTransform(markers_[index].current_camera_tf,ros::Time::now(),
-                                                          camera_tf_id_old.str(),camera_tf_id.str()));
-
-          listener_->lookupTransform(marker_tf_id_old.str(),camera_tf_id.str(),ros::Time(0),
-                                     markers_[index].tf_to_previous);
-        }
-        catch(tf::TransformException &e)
-        {
-          ROS_ERROR("Not able to lookup transform");
-        }
 
         // Save origin and quaternion of calculated TF
         marker_origin = markers_[index].tf_to_previous.getOrigin();
@@ -412,7 +381,49 @@ ArucoTracking::knownMarkerInImage(bool &any_known_marker_visible, int &last_mark
       last_marker_id = k;
      }
    }
+}
+//////////////////////////////////////////////////////////////////////////
+void
+ArucoTracking::publishCameraMarkerTransforms(int index, int last_marker_id)
+{
+  std::stringstream camera_tf_id;
+  std::stringstream camera_tf_id_old;
+  std::stringstream marker_tf_id_old;
 
+  camera_tf_id << "camera_" << index;
+  camera_tf_id_old << "camera_" << last_marker_id;
+  marker_tf_id_old << "marker_" << last_marker_id;
+  for(char k = 0; k < 10; k++)
+  {
+    // TF from old marker and its camera
+    broadcaster_.sendTransform(tf::StampedTransform(markers_[last_marker_id].current_camera_tf,ros::Time::now(),
+                                                    marker_tf_id_old.str(),camera_tf_id_old.str()));
+
+    // TF from old camera to new camera
+    broadcaster_.sendTransform(tf::StampedTransform(markers_[index].current_camera_tf,ros::Time::now(),
+                                                    camera_tf_id_old.str(),camera_tf_id.str()));
+
+    ros::Duration(BROADCAST_WAIT_INTERVAL).sleep();
+  }
+
+   // Calculate TF between two markers
+   listener_->waitForTransform(marker_tf_id_old.str(),camera_tf_id.str(),ros::Time(0),
+                               ros::Duration(WAIT_FOR_TRANSFORM_INTERVAL));
+   try
+   {
+     broadcaster_.sendTransform(tf::StampedTransform(markers_[last_marker_id].current_camera_tf,ros::Time::now(),
+                                                     marker_tf_id_old.str(),camera_tf_id_old.str()));
+
+     broadcaster_.sendTransform(tf::StampedTransform(markers_[index].current_camera_tf,ros::Time::now(),
+                                                     camera_tf_id_old.str(),camera_tf_id.str()));
+
+     listener_->lookupTransform(marker_tf_id_old.str(),camera_tf_id.str(),ros::Time(0),
+                                markers_[index].tf_to_previous);
+   }
+   catch(tf::TransformException &e)
+   {
+     ROS_ERROR("Not able to lookup transform");
+   }
 }
 
 
