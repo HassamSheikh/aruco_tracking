@@ -127,7 +127,7 @@ private:
   void nearestMarkersToCamera(bool &any_markers_visible, int &num_of_visible_markers);
   void knownMarkerInImage(bool &any_known_marker_visible, int &last_marker_id, int index);
   void publishCameraMarkerTransforms(int index, int last_marker_id);
-
+  void setCameraPose(int index, bool inverse);
   //Launch file params
   std::string calib_filename_;
   std::string space_type_;
