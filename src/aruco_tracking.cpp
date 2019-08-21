@@ -278,19 +278,9 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
       int last_marker_id;
 
       // Testing, if is possible calculate position of a new marker to old known marker
-      for(int k = 0; k < index; k++)
-      {
-        if((markers_[k].visible == true) && (any_known_marker_visible == false) &&markers_[k].previous_marker_id != -1)
-        {
-          any_known_marker_visible = true;
-          camera_tf_id_old << "camera_" << k;
-          marker_tf_id_old << "marker_" << k;
-          markers_[index].previous_marker_id = k;
-          last_marker_id = k;
-         
-         }
-       }
-
+      knownMarkerInImage(any_known_marker_visible, last_marker_id, index);
+      camera_tf_id_old << "camera_" << last_marker_id;
+      marker_tf_id_old << "marker_" << last_marker_id;
      // New position can be calculated
      if(any_known_marker_visible == true)
      {
@@ -410,6 +400,22 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   return true;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
+void
+ArucoTracking::knownMarkerInImage(bool &any_known_marker_visible, int &last_marker_id, int index)
+{
+  for(int k = 0; k < index; k++)
+  {
+    if((markers_[k].visible == true) && (any_known_marker_visible == false) && markers_[k].previous_marker_id != -1)
+    {
+      any_known_marker_visible = true;
+      markers_[index].previous_marker_id = k;
+      last_marker_id = k;
+     }
+   }
+
+}
+
+
 void
 ArucoTracking::computeGlobalMarkerPose(int index)
 {
@@ -641,6 +647,8 @@ ArucoTracking::setCurrentCameraPose(aruco::Marker &real_time_marker, int index, 
 void
 ArucoTracking::markVisible(std::vector<aruco::Marker> &real_time_markers)
 {
+  //This function marks the previously detected markers visible i.e, whether already detected markers
+  // are in the current image or not.
   for(size_t j = 0;j < global_marker_counter_; j++)
   {
     for(size_t k = 0;k < real_time_markers.size(); k++)

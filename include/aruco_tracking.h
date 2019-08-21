@@ -125,6 +125,7 @@ private:
   void computeGlobalCameraPose(bool any_markers_visible);
   void computeGlobalMarkerPose(int index);
   void nearestMarkersToCamera(bool &any_markers_visible, int &num_of_visible_markers);
+  void knownMarkerInImage(bool &any_known_marker_visible, int &last_marker_id, int index);
 
   //Launch file params
   std::string calib_filename_;
