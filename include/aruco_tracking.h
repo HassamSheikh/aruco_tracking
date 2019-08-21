@@ -76,8 +76,8 @@ public:
     int marker_id;                                  // Marker ID
     int previous_marker_id;                         // Used for chaining markers
     geometry_msgs::Pose geometry_msg_to_previous;   // Position with respect to previous marker
-    geometry_msgs::Pose geometry_msg_to_world;      // Position with respect to world's origin
     tf::StampedTransform tf_to_previous;            // TF with respect to previous marker
+    geometry_msgs::Pose geometry_msg_to_world;      // Position with respect to world's origin
     tf::StampedTransform tf_to_world;               // TF with respect to world's origin
     geometry_msgs::Pose current_camera_pose;        // Position of camera with respect to the marker
     tf::Transform current_camera_tf;                // TF of camera with respect to the marker
@@ -117,7 +117,17 @@ private:
 
   /** \brief Process actual image, detect markers and compute poses */
   bool processImage(cv::Mat input_image,cv::Mat output_image);
-
+  int isDetected(int marker_id);
+  void detectFirstMarker(std::vector<aruco::Marker> &real_time_markers);
+  void markVisible(std::vector<aruco::Marker> &real_time_markers);
+  void setCurrentCameraPose(aruco::Marker &real_time_marker, int index, bool inverse);
+  void publishCustomMarker(bool any_markers_visible, int num_of_visible_markers);
+  void computeGlobalCameraPose(bool any_markers_visible);
+  void computeGlobalMarkerPose(int index);
+  void nearestMarkersToCamera(bool &any_markers_visible, int &num_of_visible_markers);
+  void knownMarkerInImage(bool &any_known_marker_visible, int &last_marker_id, int index);
+  void publishCameraMarkerTransforms(int index, int last_marker_id);
+  void setCameraPose(int index, bool inverse);
   //Launch file params
   std::string calib_filename_;
   std::string space_type_;
