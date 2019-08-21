@@ -329,12 +329,12 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   //------------------------------------------------------
   if(first_marker_detected_ == true)
     publishTfs(true);
+    global_marker_counter_= 1;
 
   //------------------------------------------------------
   // Publish custom marker message
   //------------------------------------------------------
   publishCustomMarker(any_markers_visible, num_of_visible_markers);
-
   return true;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
