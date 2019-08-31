@@ -71,10 +71,9 @@ public:
   /** \brief Struct to keep marker information */
   struct MarkerInfo
   {
-
-    bool visible;                                   // Marker visibile in actual image?
-    int marker_id;                                  // Marker ID
-    int previous_marker_id;                         // Used for chaining markers
+    bool visible = false;                                   // Marker visibile in actual image?
+    int marker_id = -1;                                  // Marker ID
+    int previous_marker_idx = -1;                         // Used for chaining markers
     geometry_msgs::Pose geometry_msg_to_previous;   // Position with respect to previous marker
     tf::StampedTransform tf_to_previous;            // TF with respect to previous marker
     geometry_msgs::Pose geometry_msg_to_world;      // Position with respect to world's origin
@@ -126,6 +125,7 @@ private:
   void computeGlobalMarkerPose(int index);
   void nearestMarkersToCamera(bool &any_markers_visible, int &num_of_visible_markers);
   void knownMarkerInImage(bool &any_known_marker_visible, int &last_marker_id, int index);
+  void originMarkerInImage(bool &any_known_marker_visible, int index);
   void publishCameraMarkerTransforms(int index, int last_marker_id);
   void setCameraPose(int index, bool inverse);
   //Launch file params
@@ -140,7 +140,8 @@ private:
   int  roi_h_;
 
   /** \brief Container holding MarkerInfo data about all detected markers */
-  std::vector<MarkerInfo> markers_;
+  // std::vector<MarkerInfo> markers_;
+  std::map<int, MarkerInfo> markers_;
 
   /** \brief Actual TF of camera with respect to world's origin */
   tf::StampedTransform world_position_transform_;

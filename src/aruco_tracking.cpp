@@ -92,17 +92,6 @@ ArucoTracking::ArucoTracking(ros::NodeHandle *nh) :
 
   //Initialize OpenCV window
   cv::namedWindow("Mono8", CV_WINDOW_AUTOSIZE);
-
-  //Resize marker container
-  markers_.resize(num_of_markers_);
-
-  // Default markers_ initialization
-  for(size_t i = 0; i < num_of_markers_;i++)
-  {
-    markers_[i].previous_marker_id = -1;
-    markers_[i].visible = false;
-    markers_[i].marker_id = -1;
-  }
 }
 
 ArucoTracking::~ArucoTracking()
@@ -191,10 +180,10 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   aruco::MarkerDetector Detector;
   std::vector<aruco::Marker> real_time_markers;
   //Set visibility flag to false for all markers
-  for(size_t i = 0; i < num_of_markers_; i++)
-  {
-    markers_[i].visible = false;
-  }
+  // for(size_t i = 0; i < num_of_markers_; i++)
+  // {
+  //   markers_[i].visible = false;
+  // }
   Detector.detect(input_image,real_time_markers,aruco_calib_params_,marker_size_);
   if((real_time_markers.size() > 0) && (first_marker_detected_ == false))
   {
@@ -211,7 +200,112 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
     real_time_markers[i].draw(output_image, cv::Scalar(0,0,255),2);
     aruco::CvDrawingUtils::draw3dCube(output_image,real_time_markers[i], aruco_calib_params_);
     aruco::CvDrawingUtils::draw3dAxis(output_image,real_time_markers[i], aruco_calib_params_);
-   }
+    if(first_marker_detected_)
+    {
+      index = isDetected(current_marker_id);
+      if(index == 0)
+      {
+        MarkerInfo marker;
+        marker.marker_id = current_marker_id;
+        markers_[current_marker_id] = marker;
+        ROS_INFO_STREAM("New marker with ID: " << current_marker_id << " found");
+      }
+      markVisible(real_time_markers);
+      //markers_[current_marker_id].current_camera_tf=arucoMarker2Tf(real_time_markers[i]);
+      setCurrentCameraPose(real_time_markers[i], current_marker_id, false);
+      if (current_marker_id != lowest_marker_id_)
+      {
+        bool origin_marker_visible = false;
+        // Testing, if is possible calculate position of a new marker to origin marker
+        originMarkerInImage(origin_marker_visible, current_marker_id);
+        ROS_INFO_STREAM("Current Marker ID: " << current_marker_id);
+        if(origin_marker_visible)
+        {
+          // Generating TFs for listener
+          publishCameraMarkerTransforms(current_marker_id, lowest_marker_id_);
+          // Save origin and quaternion of calculated TF
+          tf::Vector3 marker_origin = markers_[current_marker_id].tf_to_previous.getOrigin();
+          tf::Quaternion marker_quaternion = markers_[current_marker_id].tf_to_previous.getRotation();
+          // If plane type selected roll, pitch and Z axis are zero
+          if(space_type_ == "plane")
+          {
+            double roll, pitch, yaw;
+            tf::Matrix3x3(marker_quaternion).getRPY(roll,pitch,yaw);
+            roll = 0;
+            pitch = 0;
+            marker_origin.setZ(0);
+            marker_quaternion.setRPY(pitch,roll,yaw);
+          }
+          markers_[current_marker_id].tf_to_previous.setRotation(marker_quaternion);
+          markers_[current_marker_id].tf_to_previous.setOrigin(marker_origin);
+          marker_origin = markers_[current_marker_id].tf_to_previous.getOrigin();
+          markers_[current_marker_id].geometry_msg_to_previous.position.x = marker_origin.getX();
+          markers_[current_marker_id].geometry_msg_to_previous.position.y = marker_origin.getY();
+          markers_[current_marker_id].geometry_msg_to_previous.position.z = marker_origin.getZ();
+          marker_quaternion = markers_[current_marker_id].tf_to_previous.getRotation();
+          markers_[current_marker_id].geometry_msg_to_previous.orientation.x = marker_quaternion.getX();
+          markers_[current_marker_id].geometry_msg_to_previous.orientation.y = marker_quaternion.getY();
+          markers_[current_marker_id].geometry_msg_to_previous.orientation.z = marker_quaternion.getZ();
+          markers_[current_marker_id].geometry_msg_to_previous.orientation.w = marker_quaternion.getW();
+        }
+      }
+        setCameraPose(current_marker_id, true);
+    // if(any_known_marker_visible == true && current_marker_id != lowest_marker_id_)
+    // {
+    //
+    //   tf::Vector3 marker_origin = markers_[index].tf_to_previous.getOrigin();
+    //   tf::Quaternion marker_quaternion = markers_[index].tf_to_previous.getRotation();
+    //   // If plane type selected roll, pitch and Z axis are zero
+    //   if(space_type_ == "plane")
+    //   {
+    //     double roll, pitch, yaw;
+    //     tf::Matrix3x3(marker_quaternion).getRPY(roll,pitch,yaw);
+    //     roll = 0;
+    //     pitch = 0;
+    //     marker_origin.setZ(0);
+    //     marker_quaternion.setRPY(pitch,roll,yaw);
+    //   }
+    //   markers_[index].tf_to_previous.setRotation(marker_quaternion);
+    //   markers_[index].tf_to_previous.setOrigin(marker_origin);
+    //   marker_origin = markers_[index].tf_to_previous.getOrigin();
+    //   markers_[index].geometry_msg_to_previous.position.x = marker_origin.getX();
+    //   markers_[index].geometry_msg_to_previous.position.y = marker_origin.getY();
+    //   markers_[index].geometry_msg_to_previous.position.z = marker_origin.getZ();
+    //   marker_quaternion = markers_[index].tf_to_previous.getRotation();
+    //   markers_[index].geometry_msg_to_previous.orientation.x = marker_quaternion.getX();
+    //   markers_[index].geometry_msg_to_previous.orientation.y = marker_quaternion.getY();
+    //   markers_[index].geometry_msg_to_previous.orientation.z = marker_quaternion.getZ();
+    //   markers_[index].geometry_msg_to_previous.orientation.w = marker_quaternion.getW();
+    //   setCameraPose(index, true);
+    //   // Publish all TFs and markers
+    //   publishTfs(false);
+    // }
+    //  computeGlobalMarkerPose(index);
+    }
+  }
+  // //------------------------------------------------------
+  // //   // Compute which of visible markers is the closest to the camera
+  // //   //------------------------------------------------------
+  //   bool any_markers_visible=false;
+  //   int num_of_visible_markers=0;
+  //   nearestMarkersToCamera(any_markers_visible, num_of_visible_markers);
+  // //
+  // //   //------------------------------------------------------
+  // //   // Compute global camera pose
+  // //   //------------------------------------------------------
+  //   computeGlobalCameraPose(any_markers_visible);
+  // //
+  // //   //------------------------------------------------------
+  // //   // Publish all known markers
+  // //   //------------------------------------------------------
+  //   if(first_marker_detected_ == true)
+  //     publishTfs(true);
+  // //
+  // //   //------------------------------------------------------
+  // //   // Publish custom marker message
+  // //   //------------------------------------------------------
+  //   publishCustomMarker(any_markers_visible, num_of_visible_markers);
+    return true;
 }
 // bool
 // ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
@@ -363,40 +457,38 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
 //   publishCustomMarker(any_markers_visible, num_of_visible_markers);
 //   return true;
 // }
-////////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////
 void
-ArucoTracking::knownMarkerInImage(bool &any_known_marker_visible, int &last_marker_id, int index)
+ArucoTracking::originMarkerInImage(bool &origin_marker_visible, int current_marker_id)
 {
-  for(int k = 0; k < index; k++)
+  int k = lowest_marker_id_;
+  if((markers_[k].visible == true) && (origin_marker_visible == false) && markers_[k].previous_marker_idx != -1)
   {
-    if((markers_[k].visible == true) && (any_known_marker_visible == false) && markers_[k].previous_marker_id != -1)
-    {
-      any_known_marker_visible = true;
-      markers_[index].previous_marker_id = k;
-      last_marker_id = k;
-     }
-   }
+    origin_marker_visible = true;
+    markers_[current_marker_id].previous_marker_idx = k;
+  }
 }
 //////////////////////////////////////////////////////////////////////////
 void
-ArucoTracking::publishCameraMarkerTransforms(int index, int last_marker_id)
+ArucoTracking::publishCameraMarkerTransforms(int current_marker_id, int lowest_marker_id_)
 {
   // Naming - TFs
   std::stringstream camera_tf_id;
   std::stringstream camera_tf_id_old;
   std::stringstream marker_tf_id_old;
 
-  camera_tf_id << "camera_" << index;
-  camera_tf_id_old << "camera_" << last_marker_id;
-  marker_tf_id_old << "marker_" << last_marker_id;
+  camera_tf_id << "camera_" << current_marker_id;
+  camera_tf_id_old << "camera_" << lowest_marker_id_;
+  marker_tf_id_old << "marker_" << lowest_marker_id_;
   for(char k = 0; k < 10; k++)
   {
     // TF from old marker and its camera
-    broadcaster_.sendTransform(tf::StampedTransform(markers_[last_marker_id].current_camera_tf,ros::Time::now(),
+    broadcaster_.sendTransform(tf::StampedTransform(markers_[lowest_marker_id_].current_camera_tf,ros::Time::now(),
                                                     marker_tf_id_old.str(),camera_tf_id_old.str()));
 
     // TF from old camera to new camera
-    broadcaster_.sendTransform(tf::StampedTransform(markers_[index].current_camera_tf,ros::Time::now(),
+    broadcaster_.sendTransform(tf::StampedTransform(markers_[current_marker_id].current_camera_tf,ros::Time::now(),
                                                     camera_tf_id_old.str(),camera_tf_id.str()));
 
     ros::Duration(BROADCAST_WAIT_INTERVAL).sleep();
@@ -407,14 +499,14 @@ ArucoTracking::publishCameraMarkerTransforms(int index, int last_marker_id)
                                ros::Duration(WAIT_FOR_TRANSFORM_INTERVAL));
    try
    {
-     broadcaster_.sendTransform(tf::StampedTransform(markers_[last_marker_id].current_camera_tf,ros::Time::now(),
+     broadcaster_.sendTransform(tf::StampedTransform(markers_[lowest_marker_id_].current_camera_tf,ros::Time::now(),
                                                      marker_tf_id_old.str(),camera_tf_id_old.str()));
 
-     broadcaster_.sendTransform(tf::StampedTransform(markers_[index].current_camera_tf,ros::Time::now(),
+     broadcaster_.sendTransform(tf::StampedTransform(markers_[current_marker_id].current_camera_tf,ros::Time::now(),
                                                      camera_tf_id_old.str(),camera_tf_id.str()));
 
      listener_->lookupTransform(marker_tf_id_old.str(),camera_tf_id.str(),ros::Time(0),
-                                markers_[index].tf_to_previous);
+                                markers_[current_marker_id].tf_to_previous);
    }
    catch(tf::TransformException &e)
    {
@@ -568,6 +660,7 @@ void
 ArucoTracking::detectFirstMarker(std::vector<aruco::Marker> &real_time_markers)
 {
   lowest_marker_id_ = real_time_markers[0].id;
+  MarkerInfo marker;
   for(size_t i = 0; i < real_time_markers.size();i++)
   {
     if(real_time_markers[i].id < lowest_marker_id_)
@@ -576,26 +669,26 @@ ArucoTracking::detectFirstMarker(std::vector<aruco::Marker> &real_time_markers)
   ROS_DEBUG_STREAM("The lowest Id marker " << lowest_marker_id_ );
 
    // Identify lowest marker ID with world's origin
-  markers_[0].marker_id = lowest_marker_id_;
+  marker.marker_id = lowest_marker_id_;
 
-  markers_[0].geometry_msg_to_world.position.x = 0;
-  markers_[0].geometry_msg_to_world.position.y = 0;
-  markers_[0].geometry_msg_to_world.position.z = 0;
+  marker.geometry_msg_to_world.position.x = 0;
+  marker.geometry_msg_to_world.position.y = 0;
+  marker.geometry_msg_to_world.position.z = 0;
 
-  markers_[0].geometry_msg_to_world.orientation.x = 0;
-  markers_[0].geometry_msg_to_world.orientation.y = 0;
-  markers_[0].geometry_msg_to_world.orientation.z = 0;
-  markers_[0].geometry_msg_to_world.orientation.w = 1;
+  marker.geometry_msg_to_world.orientation.x = 0;
+  marker.geometry_msg_to_world.orientation.y = 0;
+  marker.geometry_msg_to_world.orientation.z = 0;
+  marker.geometry_msg_to_world.orientation.w = 1;
 
    // Relative position and Global position
-  markers_[0].geometry_msg_to_previous.position.x = 0;
-  markers_[0].geometry_msg_to_previous.position.y = 0;
-  markers_[0].geometry_msg_to_previous.position.z = 0;
+  marker.geometry_msg_to_previous.position.x = 0;
+  marker.geometry_msg_to_previous.position.y = 0;
+  marker.geometry_msg_to_previous.position.z = 0;
 
-  markers_[0].geometry_msg_to_previous.orientation.x = 0;
-  markers_[0].geometry_msg_to_previous.orientation.y = 0;
-  markers_[0].geometry_msg_to_previous.orientation.z = 0;
-  markers_[0].geometry_msg_to_previous.orientation.w = 1;
+  marker.geometry_msg_to_previous.orientation.x = 0;
+  marker.geometry_msg_to_previous.orientation.y = 0;
+  marker.geometry_msg_to_previous.orientation.z = 0;
+  marker.geometry_msg_to_previous.orientation.w = 1;
 
    // Transformation Pose to TF
   tf::Vector3 position;
@@ -609,22 +702,23 @@ ArucoTracking::detectFirstMarker(std::vector<aruco::Marker> &real_time_markers)
   rotation.setZ(0);
   rotation.setW(1);
 
-  markers_[0].tf_to_previous.setOrigin(position);
-  markers_[0].tf_to_previous.setRotation(rotation);
+  marker.tf_to_previous.setOrigin(position);
+  marker.tf_to_previous.setRotation(rotation);
 
    // Relative position of first marker equals Global position
-  markers_[0].tf_to_world=markers_[0].tf_to_previous;
+  marker.tf_to_world=marker.tf_to_previous;
 
    // Increase count
   global_marker_counter_++;
 
    // Set sign of visibility of first marker
-  markers_[0].visible=true;
+  marker.visible=true;
 
-  ROS_INFO_STREAM("First marker with ID: " << markers_[0].marker_id << " detected");
+  ROS_INFO_STREAM("First marker with ID: " << marker.marker_id << " detected");
 
    //First marker does not have any previous marker
-  markers_[0].previous_marker_id = THIS_IS_FIRST_MARKER;
+  marker.previous_marker_idx = THIS_IS_FIRST_MARKER;
+  markers_[lowest_marker_id_]=marker;
 }
 /////////////////////////////////////////////////////////////////////////////
 
@@ -664,32 +758,32 @@ ArucoTracking::markVisible(std::vector<aruco::Marker> &real_time_markers)
 {
   //This function marks the previously detected markers visible i.e, whether already detected markers
   // are in the current image or not.
-  for(size_t j = 0;j < global_marker_counter_; j++)
+  for(size_t k = 0;k < real_time_markers.size(); k++)
   {
-    for(size_t k = 0;k < real_time_markers.size(); k++)
+    if (markers_.count(real_time_markers[k].id)> 0)
     {
-      if(markers_[j].marker_id == real_time_markers[k].id)
-        markers_[j].visible = true;
-      }
+      markers_[real_time_markers[k].id].visible = true;
     }
+  }
 }
 //////////////////////////////////////////////////////////////
 
 int
 ArucoTracking::isDetected(int marker_id)
 {
-  int index = -1;
-  int temp_counter = 0;
-  while((temp_counter < global_marker_counter_))
-  {
-    if(markers_[temp_counter].marker_id == marker_id)
-    {
-      index = temp_counter;
-      break;
-    }
-    temp_counter++;
-  }
-  return index;
+  return markers_.count(marker_id);
+  // int index = -1;
+  // int temp_counter = 0;
+  // while((temp_counter < global_marker_counter_))
+  // {
+  //   if(markers_[temp_counter].marker_id == marker_id)
+  //   {
+  //     index = temp_counter;
+  //     break;
+  //   }
+  //   temp_counter++;
+  // }
+  // return index;
 }
 //////////////////////////////////////////////
 
@@ -706,7 +800,7 @@ ArucoTracking::publishTfs(bool world_option)
     if(i == 0)
       marker_tf_id_old << "world";
     else
-      marker_tf_id_old << "marker_" << markers_[i].previous_marker_id;
+      marker_tf_id_old << "marker_" << markers_[i].previous_marker_idx;
     broadcaster_.sendTransform(tf::StampedTransform(markers_[i].tf_to_previous, ros::Time::now() ,marker_tf_id_old.str(), marker_tf_id.str()));
 
     // Position of camera to its marker
@@ -743,7 +837,7 @@ ArucoTracking::publishMarker(geometry_msgs::Pose marker_pose, int marker_id, int
   else
   {
     std::stringstream marker_tf_id_old;
-    marker_tf_id_old << "marker_" << markers_[index].previous_marker_id;
+    marker_tf_id_old << "marker_" << markers_[index].previous_marker_idx;
     vis_marker.header.frame_id = marker_tf_id_old.str();
   }
 
