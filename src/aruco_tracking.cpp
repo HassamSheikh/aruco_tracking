@@ -196,7 +196,6 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   for (std::map<int, MarkerInfo>::iterator it=markers_.begin(); it!=markers_.end(); ++it)
   {
     it->second.visible = false;
-    cout << it->second.visible <<endl;
   }
 
   // Save previous marker count
@@ -231,29 +230,30 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
     aruco::CvDrawingUtils::draw3dAxis(output_image,real_time_markers[i], aruco_calib_params_);
 
     // // Existing marker ?
-    index = isDetected(current_marker_id);
-    if(index != -1)
+    if(isDetected(current_marker_id))
     {
       ROS_DEBUG_STREAM("Existing marker with ID: " << current_marker_id << "found");
-      setCurrentCameraPose(real_time_markers[i], index, true);
+      setCurrentCameraPose(real_time_markers[i], current_marker_id, true);
+      index = current_marker_id;
     }
-
-    /// new marker
-    if(index == -1)
+    else
     {
-      index = global_marker_counter_;
-      markers_[index].marker_id = current_marker_id;
+      /// new marker
+      MarkerInfo marker;
+      marker.marker_id = current_marker_id;
+      markers_[current_marker_id] = marker;
       // existing = true;
       ROS_DEBUG_STREAM("New marker with ID: " << current_marker_id << " found");
+      index = global_marker_counter_;
     }
-
+    ROS_INFO_STREAM("Current Index is:" << index);
     // Change visibility flag of new marker
     markVisible(real_time_markers);
     //------------ ------------------------------------------
-    if((index == global_marker_counter_) && (first_marker_detected_ == true))
+    if(markers_[current_marker_id].previous_marker_id == -1 && (first_marker_detected_ == true))
     {
-      markers_[index].current_camera_tf=arucoMarker2Tf(real_time_markers[i]);
-      setCurrentCameraPose(real_time_markers[i], index, false);
+      //markers_[current_marker_id].current_camera_tf=arucoMarker2Tf(real_time_markers[i]);
+      setCurrentCameraPose(real_time_markers[i], current_marker_id, false);
 
       // Flag to keep info if any_known marker_visible in actual image
       bool any_known_marker_visible = false;
@@ -603,33 +603,33 @@ ArucoTracking::detectFirstMarker(std::vector<aruco::Marker> &real_time_markers)
 
 
 void
-ArucoTracking::setCurrentCameraPose(aruco::Marker &real_time_marker, int index, bool inverse)
+ArucoTracking::setCurrentCameraPose(aruco::Marker &real_time_marker, int current_marker_id, bool inverse)
 {
   if (first_marker_detected_ == true)
   {
-    markers_[index].current_camera_tf = arucoMarker2Tf(real_time_marker);
-    setCameraPose(index, inverse);
+    markers_[current_marker_id].current_camera_tf = arucoMarker2Tf(real_time_marker);
+    setCameraPose(current_marker_id, inverse);
   }
 }
 /////////////////////////////////////////////
 void
-ArucoTracking::setCameraPose(int index, bool inverse)
+ArucoTracking::setCameraPose(int current_marker_id, bool inverse)
 {
   // Invert and position of marker to compute camera pose above it
   if(inverse)
   {
-    markers_[index].current_camera_tf = markers_[index].current_camera_tf.inverse();
+    markers_[current_marker_id].current_camera_tf = markers_[current_marker_id].current_camera_tf.inverse();
   }
-  const tf::Vector3 marker_origin = markers_[index].current_camera_tf.getOrigin();
-  markers_[index].current_camera_pose.position.x = marker_origin.getX();
-  markers_[index].current_camera_pose.position.y = marker_origin.getY();
-  markers_[index].current_camera_pose.position.z = marker_origin.getZ();
+  const tf::Vector3 marker_origin = markers_[current_marker_id].current_camera_tf.getOrigin();
+  markers_[current_marker_id].current_camera_pose.position.x = marker_origin.getX();
+  markers_[current_marker_id].current_camera_pose.position.y = marker_origin.getY();
+  markers_[current_marker_id].current_camera_pose.position.z = marker_origin.getZ();
 
-  const tf::Quaternion marker_quaternion = markers_[index].current_camera_tf.getRotation();
-  markers_[index].current_camera_pose.orientation.x = marker_quaternion.getX();
-  markers_[index].current_camera_pose.orientation.y = marker_quaternion.getY();
-  markers_[index].current_camera_pose.orientation.z = marker_quaternion.getZ();
-  markers_[index].current_camera_pose.orientation.w = marker_quaternion.getW();
+  const tf::Quaternion marker_quaternion = markers_[current_marker_id].current_camera_tf.getRotation();
+  markers_[current_marker_id].current_camera_pose.orientation.x = marker_quaternion.getX();
+  markers_[current_marker_id].current_camera_pose.orientation.y = marker_quaternion.getY();
+  markers_[current_marker_id].current_camera_pose.orientation.z = marker_quaternion.getZ();
+  markers_[current_marker_id].current_camera_pose.orientation.w = marker_quaternion.getW();
 }
 
 void
@@ -637,32 +637,32 @@ ArucoTracking::markVisible(std::vector<aruco::Marker> &real_time_markers)
 {
   //This function marks the previously detected markers visible i.e, whether already detected markers
   // are in the current image or not.
-  for(size_t j = 0;j < global_marker_counter_; j++)
+  for(size_t k = 0;k < real_time_markers.size(); k++)
   {
-    for(size_t k = 0;k < real_time_markers.size(); k++)
+    if (markers_.count(real_time_markers[k].id)> 0)
     {
-      if(markers_[j].marker_id == real_time_markers[k].id)
-        markers_[j].visible = true;
-      }
+       markers_[real_time_markers[k].id].visible = true;
     }
+  }
 }
 //////////////////////////////////////////////////////////////
 
-int
+bool
 ArucoTracking::isDetected(int marker_id)
 {
-  int index = -1;
-  int temp_counter = 0;
-  while((temp_counter < global_marker_counter_))
-  {
-    if(markers_[temp_counter].marker_id == marker_id)
-    {
-      index = temp_counter;
-      break;
-    }
-    temp_counter++;
-  }
-  return index;
+  return markers_.count(marker_id) > 0;
+  // int index = -1;
+  // int temp_counter = 0;
+  // while((temp_counter < global_marker_counter_))
+  // {
+  //   if(markers_[temp_counter].marker_id == marker_id)
+  //   {
+  //     index = temp_counter;
+  //     break;
+  //   }
+  //   temp_counter++;
+  // }
+  // return index;
 }
 //////////////////////////////////////////////
 

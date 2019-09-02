@@ -117,7 +117,7 @@ private:
 
   /** \brief Process actual image, detect markers and compute poses */
   bool processImage(cv::Mat input_image,cv::Mat output_image);
-  int isDetected(int marker_id);
+  bool isDetected(int marker_id);
   void detectFirstMarker(std::vector<aruco::Marker> &real_time_markers);
   void markVisible(std::vector<aruco::Marker> &real_time_markers);
   void setCurrentCameraPose(aruco::Marker &real_time_marker, int index, bool inverse);
