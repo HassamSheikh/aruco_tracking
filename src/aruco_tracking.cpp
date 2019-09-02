@@ -298,7 +298,7 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
     //------------------------------------------------------
     // Compute global position of new marker
     //------------------------------------------------------
-      computeGlobalMarkerPose(index);
+      computeGlobalMarkerPose(current_marker_id);
   }
 
   //------------------------------------------------------
@@ -386,23 +386,23 @@ ArucoTracking::publishCameraMarkerTransforms(int current_marker_id, int last_mar
 
 
 void
-ArucoTracking::computeGlobalMarkerPose(int index)
+ArucoTracking::computeGlobalMarkerPose(int current_marker_id)
 {
-  if((global_marker_counter_previous_ < global_marker_counter_) && (first_marker_detected_ == true))
+  if(first_marker_detected_ == true)
   {
     // Publish all TF five times for listener
     for(char k = 0; k < 5; k++)
       publishTfs(false);
 
     std::stringstream marker_tf_name;
-    marker_tf_name << "marker_" << index;
+    marker_tf_name << "marker_" << current_marker_id;
 
     listener_->waitForTransform("world",marker_tf_name.str(),ros::Time(0),
                                 ros::Duration(WAIT_FOR_TRANSFORM_INTERVAL));
     try
     {
       listener_->lookupTransform("world",marker_tf_name.str(),ros::Time(0),
-                                 markers_[index].tf_to_world);
+                                 markers_[current_marker_id].tf_to_world);
     }
     catch(tf::TransformException &e)
     {
@@ -410,16 +410,16 @@ ArucoTracking::computeGlobalMarkerPose(int index)
     }
 
     // Saving TF to Pose
-    const tf::Vector3 marker_origin = markers_[index].tf_to_world.getOrigin();
-    markers_[index].geometry_msg_to_world.position.x = marker_origin.getX();
-    markers_[index].geometry_msg_to_world.position.y = marker_origin.getY();
-    markers_[index].geometry_msg_to_world.position.z = marker_origin.getZ();
+    const tf::Vector3 marker_origin = markers_[current_marker_id].tf_to_world.getOrigin();
+    markers_[current_marker_id].geometry_msg_to_world.position.x = marker_origin.getX();
+    markers_[current_marker_id].geometry_msg_to_world.position.y = marker_origin.getY();
+    markers_[current_marker_id].geometry_msg_to_world.position.z = marker_origin.getZ();
 
-    tf::Quaternion marker_quaternion=markers_[index].tf_to_world.getRotation();
-    markers_[index].geometry_msg_to_world.orientation.x = marker_quaternion.getX();
-    markers_[index].geometry_msg_to_world.orientation.y = marker_quaternion.getY();
-    markers_[index].geometry_msg_to_world.orientation.z = marker_quaternion.getZ();
-    markers_[index].geometry_msg_to_world.orientation.w = marker_quaternion.getW();
+    tf::Quaternion marker_quaternion=markers_[current_marker_id].tf_to_world.getRotation();
+    markers_[current_marker_id].geometry_msg_to_world.orientation.x = marker_quaternion.getX();
+    markers_[current_marker_id].geometry_msg_to_world.orientation.y = marker_quaternion.getY();
+    markers_[current_marker_id].geometry_msg_to_world.orientation.z = marker_quaternion.getZ();
+    markers_[current_marker_id].geometry_msg_to_world.orientation.w = marker_quaternion.getW();
   }
 }
 ///////////////////////////////////////////////////////////////////////////////
