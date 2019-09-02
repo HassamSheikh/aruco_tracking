@@ -92,17 +92,6 @@ ArucoTracking::ArucoTracking(ros::NodeHandle *nh) :
 
   //Initialize OpenCV window
   cv::namedWindow("Mono8", CV_WINDOW_AUTOSIZE);
-
-  //Resize marker container
-  // markers_.resize(num_of_markers_);
-  //
-  // // Default markers_ initialization
-  // for(size_t i = 0; i < num_of_markers_;i++)
-  // {
-  //   markers_[i].previous_marker_id = -1;
-  //   markers_[i].visible = false;
-  //   markers_[i].marker_id = -1;
-  // }
 }
 
 ArucoTracking::~ArucoTracking()
@@ -234,7 +223,6 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
     {
       ROS_DEBUG_STREAM("Existing marker with ID: " << current_marker_id << "found");
       setCurrentCameraPose(real_time_markers[i], current_marker_id, true);
-      index = current_marker_id;
     }
     else
     {
@@ -244,7 +232,6 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
       markers_[current_marker_id] = marker;
       // existing = true;
       ROS_DEBUG_STREAM("New marker with ID: " << current_marker_id << " found");
-      index = global_marker_counter_;
     }
     ROS_INFO_STREAM("Current Index is:" << index);
     // Change visibility flag of new marker
@@ -340,28 +327,28 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
 void
-ArucoTracking::knownMarkerInImage(bool &any_known_marker_visible, int &last_marker_id, int index)
+ArucoTracking::knownMarkerInImage(bool &any_known_marker_visible, int &last_marker_id, int current_marker_id)
 {
-  for(int k = 0; k < index; k++)
+  for (std::map<int, MarkerInfo>::iterator it=markers_.begin(); it!=markers_.end(); ++it)
   {
-    if((markers_[k].visible == true) && (any_known_marker_visible == false) && markers_[k].previous_marker_id != -1)
+    if((it->second.visible) && (!any_known_marker_visible) && (it->second.previous_marker_id != -1))
     {
       any_known_marker_visible = true;
-      markers_[index].previous_marker_id = k;
-      last_marker_id = k;
-     }
-   }
+      markers_[current_marker_id].previous_marker_id = it->first;
+      last_marker_id = it->first;
+    }
+  }
 }
 //////////////////////////////////////////////////////////////////////////
 void
-ArucoTracking::publishCameraMarkerTransforms(int index, int last_marker_id)
+ArucoTracking::publishCameraMarkerTransforms(int current_marker_id, int last_marker_id)
 {
   // Naming - TFs
   std::stringstream camera_tf_id;
   std::stringstream camera_tf_id_old;
   std::stringstream marker_tf_id_old;
 
-  camera_tf_id << "camera_" << index;
+  camera_tf_id << "camera_" << current_marker_id;
   camera_tf_id_old << "camera_" << last_marker_id;
   marker_tf_id_old << "marker_" << last_marker_id;
   for(char k = 0; k < 10; k++)
@@ -371,7 +358,7 @@ ArucoTracking::publishCameraMarkerTransforms(int index, int last_marker_id)
                                                     marker_tf_id_old.str(),camera_tf_id_old.str()));
 
     // TF from old camera to new camera
-    broadcaster_.sendTransform(tf::StampedTransform(markers_[index].current_camera_tf,ros::Time::now(),
+    broadcaster_.sendTransform(tf::StampedTransform(markers_[current_marker_id].current_camera_tf,ros::Time::now(),
                                                     camera_tf_id_old.str(),camera_tf_id.str()));
 
     ros::Duration(BROADCAST_WAIT_INTERVAL).sleep();
@@ -385,11 +372,11 @@ ArucoTracking::publishCameraMarkerTransforms(int index, int last_marker_id)
      broadcaster_.sendTransform(tf::StampedTransform(markers_[last_marker_id].current_camera_tf,ros::Time::now(),
                                                      marker_tf_id_old.str(),camera_tf_id_old.str()));
 
-     broadcaster_.sendTransform(tf::StampedTransform(markers_[index].current_camera_tf,ros::Time::now(),
+     broadcaster_.sendTransform(tf::StampedTransform(markers_[current_marker_id].current_camera_tf,ros::Time::now(),
                                                      camera_tf_id_old.str(),camera_tf_id.str()));
 
      listener_->lookupTransform(marker_tf_id_old.str(),camera_tf_id.str(),ros::Time(0),
-                                markers_[index].tf_to_previous);
+                                markers_[current_marker_id].tf_to_previous);
    }
    catch(tf::TransformException &e)
    {
