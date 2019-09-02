@@ -94,15 +94,15 @@ ArucoTracking::ArucoTracking(ros::NodeHandle *nh) :
   cv::namedWindow("Mono8", CV_WINDOW_AUTOSIZE);
 
   //Resize marker container
-  markers_.resize(num_of_markers_);
-
-  // Default markers_ initialization
-  for(size_t i = 0; i < num_of_markers_;i++)
-  {
-    markers_[i].previous_marker_id = -1;
-    markers_[i].visible = false;
-    markers_[i].marker_id = -1;
-  }
+  // markers_.resize(num_of_markers_);
+  //
+  // // Default markers_ initialization
+  // for(size_t i = 0; i < num_of_markers_;i++)
+  // {
+  //   markers_[i].previous_marker_id = -1;
+  //   markers_[i].visible = false;
+  //   markers_[i].marker_id = -1;
+  // }
 }
 
 ArucoTracking::~ArucoTracking()
@@ -193,8 +193,11 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   std::vector<aruco::Marker> real_time_markers;
 
   //Set visibility flag to false for all markers
-  for(size_t i = 0; i < num_of_markers_; i++)
-      markers_[i].visible = false;
+  for (std::map<int, MarkerInfo>::iterator it=markers_.begin(); it!=markers_.end(); ++it)
+  {
+    it->second.visible = false;
+    cout << it->second.visible <<endl;
+  }
 
   // Save previous marker count
   global_marker_counter_previous_ = global_marker_counter_;
@@ -214,7 +217,6 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
     first_marker_detected_=true;
     detectFirstMarker(real_time_markers);
   }
-
   //------------------------------------------------------
   // FOR EVERY MARKER DO
   //------------------------------------------------------
@@ -329,7 +331,6 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   //------------------------------------------------------
   if(first_marker_detected_ == true)
     publishTfs(true);
-    global_marker_counter_= 1;
 
   //------------------------------------------------------
   // Publish custom marker message
@@ -547,28 +548,28 @@ ArucoTracking::detectFirstMarker(std::vector<aruco::Marker> &real_time_markers)
       lowest_marker_id_ = real_time_markers[i].id;
   }
   ROS_DEBUG_STREAM("The lowest Id marker " << lowest_marker_id_ );
-
+  MarkerInfo marker;
    // Identify lowest marker ID with world's origin
-  markers_[0].marker_id = lowest_marker_id_;
+  marker.marker_id = lowest_marker_id_;
 
-  markers_[0].geometry_msg_to_world.position.x = 0;
-  markers_[0].geometry_msg_to_world.position.y = 0;
-  markers_[0].geometry_msg_to_world.position.z = 0;
+  marker.geometry_msg_to_world.position.x = 0;
+  marker.geometry_msg_to_world.position.y = 0;
+  marker.geometry_msg_to_world.position.z = 0;
 
-  markers_[0].geometry_msg_to_world.orientation.x = 0;
-  markers_[0].geometry_msg_to_world.orientation.y = 0;
-  markers_[0].geometry_msg_to_world.orientation.z = 0;
-  markers_[0].geometry_msg_to_world.orientation.w = 1;
+  marker.geometry_msg_to_world.orientation.x = 0;
+  marker.geometry_msg_to_world.orientation.y = 0;
+  marker.geometry_msg_to_world.orientation.z = 0;
+  marker.geometry_msg_to_world.orientation.w = 1;
 
    // Relative position and Global position
-  markers_[0].geometry_msg_to_previous.position.x = 0;
-  markers_[0].geometry_msg_to_previous.position.y = 0;
-  markers_[0].geometry_msg_to_previous.position.z = 0;
+  marker.geometry_msg_to_previous.position.x = 0;
+  marker.geometry_msg_to_previous.position.y = 0;
+  marker.geometry_msg_to_previous.position.z = 0;
 
-  markers_[0].geometry_msg_to_previous.orientation.x = 0;
-  markers_[0].geometry_msg_to_previous.orientation.y = 0;
-  markers_[0].geometry_msg_to_previous.orientation.z = 0;
-  markers_[0].geometry_msg_to_previous.orientation.w = 1;
+  marker.geometry_msg_to_previous.orientation.x = 0;
+  marker.geometry_msg_to_previous.orientation.y = 0;
+  marker.geometry_msg_to_previous.orientation.z = 0;
+  marker.geometry_msg_to_previous.orientation.w = 1;
 
    // Transformation Pose to TF
   tf::Vector3 position;
@@ -582,22 +583,21 @@ ArucoTracking::detectFirstMarker(std::vector<aruco::Marker> &real_time_markers)
   rotation.setZ(0);
   rotation.setW(1);
 
-  markers_[0].tf_to_previous.setOrigin(position);
-  markers_[0].tf_to_previous.setRotation(rotation);
+  marker.tf_to_previous.setOrigin(position);
+  marker.tf_to_previous.setRotation(rotation);
 
    // Relative position of first marker equals Global position
-  markers_[0].tf_to_world=markers_[0].tf_to_previous;
+  marker.tf_to_world=marker.tf_to_previous;
 
    // Increase count
   global_marker_counter_++;
 
    // Set sign of visibility of first marker
-  markers_[0].visible=true;
-
-  ROS_INFO_STREAM("First marker with ID: " << markers_[0].marker_id << " detected");
-
+  marker.visible=true;
    //First marker does not have any previous marker
-  markers_[0].previous_marker_id = THIS_IS_FIRST_MARKER;
+  marker.previous_marker_id = THIS_IS_FIRST_MARKER;
+  markers_[lowest_marker_id_] = marker;
+  ROS_INFO_STREAM("First marker with ID: " << markers_[lowest_marker_id_].marker_id << " detected");
 }
 /////////////////////////////////////////////////////////////////////////////
 

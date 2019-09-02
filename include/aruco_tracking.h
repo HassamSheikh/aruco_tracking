@@ -72,9 +72,9 @@ public:
   struct MarkerInfo
   {
 
-    bool visible;                                   // Marker visibile in actual image?
-    int marker_id;                                  // Marker ID
-    int previous_marker_id;                         // Used for chaining markers
+    bool visible = false;                                   // Marker visibile in actual image?
+    int marker_id = -1;                                  // Marker ID
+    int previous_marker_id = -1;                         // Used for chaining markers
     geometry_msgs::Pose geometry_msg_to_previous;   // Position with respect to previous marker
     tf::StampedTransform tf_to_previous;            // TF with respect to previous marker
     geometry_msgs::Pose geometry_msg_to_world;      // Position with respect to world's origin
@@ -140,7 +140,7 @@ private:
   int  roi_h_;
 
   /** \brief Container holding MarkerInfo data about all detected markers */
-  std::vector<MarkerInfo> markers_;
+   std::map<int, MarkerInfo> markers_;
 
   /** \brief Actual TF of camera with respect to world's origin */
   tf::StampedTransform world_position_transform_;
