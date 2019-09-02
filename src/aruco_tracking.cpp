@@ -255,10 +255,10 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
      if(any_known_marker_visible == true)
      {
        // Generating TFs for listener
-       publishCameraMarkerTransforms(index, last_marker_id);
+       publishCameraMarkerTransforms(current_marker_id, last_marker_id);
         // Save origin and quaternion of calculated TF
-        tf::Vector3 marker_origin = markers_[index].tf_to_previous.getOrigin();
-        tf::Quaternion marker_quaternion = markers_[index].tf_to_previous.getRotation();
+        tf::Vector3 marker_origin = markers_[current_marker_id].tf_to_previous.getOrigin();
+        tf::Quaternion marker_quaternion = markers_[current_marker_id].tf_to_previous.getRotation();
 
         // If plane type selected roll, pitch and Z axis are zero
         if(space_type_ == "plane")
@@ -271,24 +271,24 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
           marker_quaternion.setRPY(pitch,roll,yaw);
         }
 
-        markers_[index].tf_to_previous.setRotation(marker_quaternion);
-        markers_[index].tf_to_previous.setOrigin(marker_origin);
+        markers_[current_marker_id].tf_to_previous.setRotation(marker_quaternion);
+        markers_[current_marker_id].tf_to_previous.setOrigin(marker_origin);
 
-        marker_origin = markers_[index].tf_to_previous.getOrigin();
-        markers_[index].geometry_msg_to_previous.position.x = marker_origin.getX();
-        markers_[index].geometry_msg_to_previous.position.y = marker_origin.getY();
-        markers_[index].geometry_msg_to_previous.position.z = marker_origin.getZ();
+        marker_origin = markers_[current_marker_id].tf_to_previous.getOrigin();
+        markers_[current_marker_id].geometry_msg_to_previous.position.x = marker_origin.getX();
+        markers_[current_marker_id].geometry_msg_to_previous.position.y = marker_origin.getY();
+        markers_[current_marker_id].geometry_msg_to_previous.position.z = marker_origin.getZ();
 
-        marker_quaternion = markers_[index].tf_to_previous.getRotation();
-        markers_[index].geometry_msg_to_previous.orientation.x = marker_quaternion.getX();
-        markers_[index].geometry_msg_to_previous.orientation.y = marker_quaternion.getY();
-        markers_[index].geometry_msg_to_previous.orientation.z = marker_quaternion.getZ();
-        markers_[index].geometry_msg_to_previous.orientation.w = marker_quaternion.getW();
+        marker_quaternion = markers_[current_marker_id].tf_to_previous.getRotation();
+        markers_[current_marker_id].geometry_msg_to_previous.orientation.x = marker_quaternion.getX();
+        markers_[current_marker_id].geometry_msg_to_previous.orientation.y = marker_quaternion.getY();
+        markers_[current_marker_id].geometry_msg_to_previous.orientation.z = marker_quaternion.getZ();
+        markers_[current_marker_id].geometry_msg_to_previous.orientation.w = marker_quaternion.getW();
 
         // increase marker count
         global_marker_counter_++;
 
-        setCameraPose(index, true);
+        setCameraPose(current_marker_id, true);
 
         // Publish all TFs and markers
         publishTfs(false);
@@ -656,14 +656,15 @@ ArucoTracking::isDetected(int marker_id)
 void
 ArucoTracking::publishTfs(bool world_option)
 {
-  for(int i = 0; i < global_marker_counter_; i++)
+  for(std::map<int, MarkerInfo>::iterator it=markers_.begin(); it!=markers_.end(); ++it)
   {
+    int i = it->first;
     // Actual Marker
     std::stringstream marker_tf_id;
     marker_tf_id << "marker_" << i;
     // Older marker - or World
     std::stringstream marker_tf_id_old;
-    if(i == 0)
+    if(i == lowest_marker_id_)
       marker_tf_id_old << "world";
     else
       marker_tf_id_old << "marker_" << markers_[i].previous_marker_id;
@@ -683,7 +684,7 @@ ArucoTracking::publishTfs(bool world_option)
     }
 
     // Cubes for RVIZ - markers
-    publishMarker(markers_[i].geometry_msg_to_previous,markers_[i].marker_id,i);
+    publishMarker(markers_[i].geometry_msg_to_previous, markers_[i].marker_id);
   }
 
   // Global Position of object
@@ -694,16 +695,16 @@ ArucoTracking::publishTfs(bool world_option)
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 void
-ArucoTracking::publishMarker(geometry_msgs::Pose marker_pose, int marker_id, int index)
+ArucoTracking::publishMarker(geometry_msgs::Pose marker_pose, int marker_id)
 {
   visualization_msgs::Marker vis_marker;
 
-  if(index == 0)
+  if(marker_id == lowest_marker_id_)
     vis_marker.header.frame_id = "world";
   else
   {
     std::stringstream marker_tf_id_old;
-    marker_tf_id_old << "marker_" << markers_[index].previous_marker_id;
+    marker_tf_id_old << "marker_" << markers_[marker_id].previous_marker_id;
     vis_marker.header.frame_id = marker_tf_id_old.str();
   }
 

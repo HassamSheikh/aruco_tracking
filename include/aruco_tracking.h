@@ -102,7 +102,7 @@ private:
   void publishTfs(bool world_option);
 
   /** \brief Function to publish all known markers for visualization purposes*/
-  void publishMarker(geometry_msgs::Pose markerPose, int MarkerID, int rank);
+  void publishMarker(geometry_msgs::Pose markerPose, int MarkerID);
 
   /** \brief Publisher of visualization_msgs::Marker message to "aruco_markers" topic*/
   ros::Publisher marker_visualization_pub_;
