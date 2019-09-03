@@ -299,9 +299,9 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   //------------------------------------------------------
   // Compute which of visible markers is the closest to the camera
   //------------------------------------------------------
-  // bool any_markers_visible=false;
-  // int num_of_visible_markers=0;
-  // nearestMarkersToCamera(any_markers_visible, num_of_visible_markers);
+  bool any_markers_visible=false;
+  int num_of_visible_markers=0;
+  nearestMarkersToCamera(any_markers_visible, num_of_visible_markers);
   //
   // //------------------------------------------------------
   // // Compute global camera pose
@@ -471,6 +471,7 @@ ArucoTracking::nearestMarkersToCamera(bool &any_markers_visible, int &num_of_vis
       // If marker is visible, distance is calculated
       if(markers_[k].visible==true)
       {
+        cout<<"Marker ID visible: "<<k<<endl;
         a = markers_[k].current_camera_pose.position.x;
         b = markers_[k].current_camera_pose.position.y;
         c = markers_[k].current_camera_pose.position.z;
@@ -486,6 +487,8 @@ ArucoTracking::nearestMarkersToCamera(bool &any_markers_visible, int &num_of_vis
       }
     }
   }
+  cout<<"Total Number of Visible Markers: "<<  num_of_visible_markers<<endl;
+  cout<<"Closest Camera index: "<< closest_camera_index_<<endl; 
 }
 
 void
