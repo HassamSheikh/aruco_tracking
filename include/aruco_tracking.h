@@ -72,9 +72,9 @@ public:
   struct MarkerInfo
   {
 
-    bool visible;                                   // Marker visibile in actual image?
-    int marker_id;                                  // Marker ID
-    int previous_marker_id;                         // Used for chaining markers
+    bool visible = false;                                   // Marker visibile in actual image?
+    int marker_id = -1;                                  // Marker ID
+    int previous_marker_id = -1;                         // Used for chaining markers
     geometry_msgs::Pose geometry_msg_to_previous;   // Position with respect to previous marker
     tf::StampedTransform tf_to_previous;            // TF with respect to previous marker
     geometry_msgs::Pose geometry_msg_to_world;      // Position with respect to world's origin
@@ -102,7 +102,7 @@ private:
   void publishTfs(bool world_option);
 
   /** \brief Function to publish all known markers for visualization purposes*/
-  void publishMarker(geometry_msgs::Pose markerPose, int MarkerID, int rank);
+  void publishMarker(geometry_msgs::Pose markerPose, int MarkerID);
 
   /** \brief Publisher of visualization_msgs::Marker message to "aruco_markers" topic*/
   ros::Publisher marker_visualization_pub_;
@@ -117,7 +117,7 @@ private:
 
   /** \brief Process actual image, detect markers and compute poses */
   bool processImage(cv::Mat input_image,cv::Mat output_image);
-  int isDetected(int marker_id);
+  bool isDetected(int marker_id);
   void detectFirstMarker(std::vector<aruco::Marker> &real_time_markers);
   void markVisible(std::vector<aruco::Marker> &real_time_markers);
   void setCurrentCameraPose(aruco::Marker &real_time_marker, int index, bool inverse);
@@ -140,7 +140,7 @@ private:
   int  roi_h_;
 
   /** \brief Container holding MarkerInfo data about all detected markers */
-  std::vector<MarkerInfo> markers_;
+   std::map<int, MarkerInfo> markers_;
 
   /** \brief Actual TF of camera with respect to world's origin */
   tf::StampedTransform world_position_transform_;
@@ -150,8 +150,6 @@ private:
 
   aruco::CameraParameters aruco_calib_params_;
 
-  int global_marker_counter_;
-  int global_marker_counter_previous_;
   int closest_camera_index_;
   int lowest_marker_id_;
   bool first_marker_detected_;
