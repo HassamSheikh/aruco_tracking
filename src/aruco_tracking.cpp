@@ -254,52 +254,51 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
        // Generating TFs for listener
        publishCameraMarkerTransforms(current_marker_id, last_marker_id);
         // Save origin and quaternion of calculated TF
-        // tf::Vector3 marker_origin = markers_[current_marker_id].tf_to_previous.getOrigin();
-        // tf::Quaternion marker_quaternion = markers_[current_marker_id].tf_to_previous.getRotation();
+        tf::Vector3 marker_origin = markers_[current_marker_id].tf_to_previous.getOrigin();
+        tf::Quaternion marker_quaternion = markers_[current_marker_id].tf_to_previous.getRotation();
+        // If plane type selected roll, pitch and Z axis are zero
+        if(space_type_ == "plane")
+        {
+          double roll, pitch, yaw;
+          tf::Matrix3x3(marker_quaternion).getRPY(roll,pitch,yaw);
+          roll = 0;
+          pitch = 0;
+          marker_origin.setZ(0);
+          marker_quaternion.setRPY(pitch,roll,yaw);
+        }
+
+        markers_[current_marker_id].tf_to_previous.setRotation(marker_quaternion);
+        markers_[current_marker_id].tf_to_previous.setOrigin(marker_origin);
+
+        marker_origin = markers_[current_marker_id].tf_to_previous.getOrigin();
+        markers_[current_marker_id].geometry_msg_to_previous.position.x = marker_origin.getX();
+        markers_[current_marker_id].geometry_msg_to_previous.position.y = marker_origin.getY();
+        markers_[current_marker_id].geometry_msg_to_previous.position.z = marker_origin.getZ();
         //
-        // // If plane type selected roll, pitch and Z axis are zero
-        // if(space_type_ == "plane")
-        // {
-        //   double roll, pitch, yaw;
-        //   tf::Matrix3x3(marker_quaternion).getRPY(roll,pitch,yaw);
-        //   roll = 0;
-        //   pitch = 0;
-        //   marker_origin.setZ(0);
-        //   marker_quaternion.setRPY(pitch,roll,yaw);
-        // }
+        marker_quaternion = markers_[current_marker_id].tf_to_previous.getRotation();
+        markers_[current_marker_id].geometry_msg_to_previous.orientation.x = marker_quaternion.getX();
+        markers_[current_marker_id].geometry_msg_to_previous.orientation.y = marker_quaternion.getY();
+        markers_[current_marker_id].geometry_msg_to_previous.orientation.z = marker_quaternion.getZ();
+        markers_[current_marker_id].geometry_msg_to_previous.orientation.w = marker_quaternion.getW();
         //
-        // markers_[current_marker_id].tf_to_previous.setRotation(marker_quaternion);
-        // markers_[current_marker_id].tf_to_previous.setOrigin(marker_origin);
+        setCameraPose(current_marker_id, true);
         //
-        // marker_origin = markers_[current_marker_id].tf_to_previous.getOrigin();
-        // markers_[current_marker_id].geometry_msg_to_previous.position.x = marker_origin.getX();
-        // markers_[current_marker_id].geometry_msg_to_previous.position.y = marker_origin.getY();
-        // markers_[current_marker_id].geometry_msg_to_previous.position.z = marker_origin.getZ();
-        //
-        // marker_quaternion = markers_[current_marker_id].tf_to_previous.getRotation();
-        // markers_[current_marker_id].geometry_msg_to_previous.orientation.x = marker_quaternion.getX();
-        // markers_[current_marker_id].geometry_msg_to_previous.orientation.y = marker_quaternion.getY();
-        // markers_[current_marker_id].geometry_msg_to_previous.orientation.z = marker_quaternion.getZ();
-        // markers_[current_marker_id].geometry_msg_to_previous.orientation.w = marker_quaternion.getW();
-        //
-        // setCameraPose(current_marker_id, true);
-        //
-        // // Publish all TFs and markers
-        // publishTfs(false);
+        // Publish all TFs and markers
+        publishTfs(false);
       }
     }
 
     //------------------------------------------------------
     // Compute global position of new marker
-    //------------------------------------------------------
-    //  computeGlobalMarkerPose(current_marker_id);
+    //-----------------------------------------------------
+    computeGlobalMarkerPose(current_marker_id);
   }
 
 
-  // //After For Loop Code
-  // //------------------------------------------------------
-  // // Compute which of visible markers is the closest to the camera
-  // //------------------------------------------------------
+  //After For Loop Code
+  //------------------------------------------------------
+  // Compute which of visible markers is the closest to the camera
+  //------------------------------------------------------
   // bool any_markers_visible=false;
   // int num_of_visible_markers=0;
   // nearestMarkersToCamera(any_markers_visible, num_of_visible_markers);
@@ -348,6 +347,9 @@ ArucoTracking::publishCameraMarkerTransforms(int current_marker_id, int last_mar
   camera_tf_id << "camera_" << current_marker_id;
   camera_tf_id_old << "camera_" << last_marker_id;
   marker_tf_id_old << "marker_" << last_marker_id;
+  cout<<"Current Camera ID: "<< current_marker_id<<endl;
+  cout<<"Previous Camera ID: "<<last_marker_id<<endl;
+  cout<<"Previous Marker ID: "<<last_marker_id<<endl;
   for(char k = 0; k < 10; k++)
   {
     // TF from old marker and its camera
@@ -385,7 +387,7 @@ ArucoTracking::publishCameraMarkerTransforms(int current_marker_id, int last_mar
 void
 ArucoTracking::computeGlobalMarkerPose(int current_marker_id)
 {
-  if(markers_[current_marker_id].previous_marker_id == -1 && first_marker_detected_ == true)
+  if(first_marker_detected_ == true)
   {
     // Publish all TF five times for listener
     for(char k = 0; k < 5; k++)
