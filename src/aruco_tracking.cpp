@@ -629,18 +629,6 @@ bool
 ArucoTracking::isDetected(int marker_id)
 {
   return markers_.count(marker_id) > 0;
-  // int index = -1;
-  // int temp_counter = 0;
-  // while((temp_counter < global_marker_counter_))
-  // {
-  //   if(markers_[temp_counter].marker_id == marker_id)
-  //   {
-  //     index = temp_counter;
-  //     break;
-  //   }
-  //   temp_counter++;
-  // }
-  // return index;
 }
 //////////////////////////////////////////////
 
