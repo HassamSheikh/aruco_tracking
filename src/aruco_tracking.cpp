@@ -465,10 +465,10 @@ ArucoTracking::nearestMarkersToCamera(bool &any_markers_visible, int &num_of_vis
   if(first_marker_detected_ == true)
   {
     double minimal_distance = INIT_MIN_SIZE_VALUE;
-    for(int k = 0; k < num_of_markers_; k++)
+    for (std::map<int, MarkerInfo>::iterator it=markers_.begin(); it!=markers_.end(); ++it)
     {
-      double a,b,c,size;
-
+      int k = it->first;
+      double a,b,c,size;;
       // If marker is visible, distance is calculated
       if(markers_[k].visible==true)
       {
