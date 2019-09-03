@@ -234,7 +234,6 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
     //------------ ------------------------------------------
     if((markers_[current_marker_id].previous_marker_id == -1) && (first_marker_detected_ == true) && (current_marker_id != lowest_marker_id_))
     {
-      cout<<"Current Marker in Processing: "<< current_marker_id<<endl;
       //markers_[current_marker_id].current_camera_tf=arucoMarker2Tf(real_time_markers[i]);
       setCurrentCameraPose(real_time_markers[i], current_marker_id, false);
 
@@ -249,8 +248,6 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
      // New position can be calculated
      if(any_known_marker_visible == true)
      {
-       cout<<"Current Marker in Processing in KMI: "<< last_marker_id<<endl;
-       cout<<"Previous Marker ID to current Marker ID " << markers_[current_marker_id].previous_marker_id <<endl;
        // Generating TFs for listener
        publishCameraMarkerTransforms(current_marker_id, last_marker_id);
         // Save origin and quaternion of calculated TF
@@ -302,22 +299,22 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   bool any_markers_visible=false;
   int num_of_visible_markers=0;
   nearestMarkersToCamera(any_markers_visible, num_of_visible_markers);
-  //
-  // //------------------------------------------------------
-  // // Compute global camera pose
-  // //------------------------------------------------------
-  // computeGlobalCameraPose(any_markers_visible);
-  //
-  // //------------------------------------------------------
-  // // Publish all known markers
-  // //------------------------------------------------------
-  // if(first_marker_detected_ == true)
-  //   publishTfs(true);
-  //
-  // //------------------------------------------------------
-  // // Publish custom marker message
-  // //------------------------------------------------------
-  // publishCustomMarker(any_markers_visible, num_of_visible_markers);
+
+  //------------------------------------------------------
+  // Compute global camera pose
+  //------------------------------------------------------
+  computeGlobalCameraPose(any_markers_visible);
+
+  //------------------------------------------------------
+  // Publish all known markers
+  //------------------------------------------------------
+  if(first_marker_detected_ == true)
+    publishTfs(true);
+
+  //------------------------------------------------------
+  // Publish custom marker message
+  //------------------------------------------------------
+  publishCustomMarker(any_markers_visible, num_of_visible_markers);
   return true;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -338,7 +335,6 @@ ArucoTracking::knownMarkerInImage(bool &any_known_marker_visible, int &last_mark
 void
 ArucoTracking::publishCameraMarkerTransforms(int current_marker_id, int last_marker_id)
 {
-  cout<<"Inside Publish Camera Marker"<<endl;
   // Naming - TFs
   std::stringstream camera_tf_id;
   std::stringstream camera_tf_id_old;
@@ -347,9 +343,6 @@ ArucoTracking::publishCameraMarkerTransforms(int current_marker_id, int last_mar
   camera_tf_id << "camera_" << current_marker_id;
   camera_tf_id_old << "camera_" << last_marker_id;
   marker_tf_id_old << "marker_" << last_marker_id;
-  cout<<"Current Camera ID: "<< current_marker_id<<endl;
-  cout<<"Previous Camera ID: "<<last_marker_id<<endl;
-  cout<<"Previous Marker ID: "<<last_marker_id<<endl;
   for(char k = 0; k < 10; k++)
   {
     // TF from old marker and its camera
@@ -471,7 +464,6 @@ ArucoTracking::nearestMarkersToCamera(bool &any_markers_visible, int &num_of_vis
       // If marker is visible, distance is calculated
       if(markers_[k].visible==true)
       {
-        cout<<"Marker ID visible: "<<k<<endl;
         a = markers_[k].current_camera_pose.position.x;
         b = markers_[k].current_camera_pose.position.y;
         c = markers_[k].current_camera_pose.position.z;
@@ -487,8 +479,6 @@ ArucoTracking::nearestMarkersToCamera(bool &any_markers_visible, int &num_of_vis
       }
     }
   }
-  cout<<"Total Number of Visible Markers: "<<  num_of_visible_markers<<endl;
-  cout<<"Closest Camera index: "<< closest_camera_index_<<endl; 
 }
 
 void
