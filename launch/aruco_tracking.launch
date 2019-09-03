@@ -25,8 +25,8 @@
     <param name="roi_allowed" type="bool" value="false" /> -->
     <param name="roi_x" type="int" value="0" /> -->
     <param name="roi_y" type="int" value="0" /> -->
-    <param name="roi_width" type="int" value="640" /> -->
-    <param name="roi_height" type="int" value="480" /> -->
+    <param name="roi_w" type="int" value="640" /> -->
+    <param name="roi_h" type="int" value="480" /> -->
 
   </node>
 </launch>

@@ -214,7 +214,7 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
     aruco::CvDrawingUtils::draw3dAxis(output_image,real_time_markers[i], aruco_calib_params_);
 
     // // Existing marker ?
-    if(isDetected(current_marker_id))
+    if(isDetected(current_marker_id) && markers_[current_marker_id].previous_marker_id != -1)
     {
       ROS_DEBUG_STREAM("Existing marker with ID: " << current_marker_id << " found");
       setCurrentCameraPose(real_time_markers[i], current_marker_id, true);
@@ -315,6 +315,15 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   // Publish custom marker message
   //------------------------------------------------------
   publishCustomMarker(any_markers_visible, num_of_visible_markers);
+
+  //--------------------------------------
+  // Reset Markers
+  //--------------------------------------
+  for (auto itr = markers_.begin(); itr != markers_.end(); ++itr) {
+    if(itr->first != lowest_marker_id_){
+      markers_[itr->first].previous_marker_id = -1;
+    }
+  }
   return true;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
