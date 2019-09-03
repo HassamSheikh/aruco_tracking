@@ -214,7 +214,7 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
     aruco::CvDrawingUtils::draw3dAxis(output_image,real_time_markers[i], aruco_calib_params_);
 
     // // Existing marker ?
-    if(isDetected(current_marker_id) && markers_[current_marker_id].previous_marker_id != -1)
+    if(isDetected(current_marker_id))
     {
       ROS_DEBUG_STREAM("Existing marker with ID: " << current_marker_id << " found");
       setCurrentCameraPose(real_time_markers[i], current_marker_id, true);
@@ -245,6 +245,7 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
 
       // Testing, if is possible calculate position of a new marker to old known marker
       knownMarkerInImage(any_known_marker_visible, last_marker_id, current_marker_id);
+
      // New position can be calculated
      if(any_known_marker_visible == true)
      {
@@ -321,7 +322,7 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
   //--------------------------------------
   for (auto itr = markers_.begin(); itr != markers_.end(); ++itr) {
     if(itr->first != lowest_marker_id_){
-      markers_[itr->first].previous_marker_id = -1;
+      markers_.erase(itr->first);
     }
   }
   return true;
@@ -330,14 +331,11 @@ ArucoTracking::processImage(cv::Mat input_image,cv::Mat output_image)
 void
 ArucoTracking::knownMarkerInImage(bool &any_known_marker_visible, int &last_marker_id, int current_marker_id)
 {
-  for (std::map<int, MarkerInfo>::iterator it=markers_.begin(); it!=markers_.end(); ++it)
+  if (markers_[lowest_marker_id_].visible==true)
   {
-    if((it->second.visible) && (!any_known_marker_visible) && (it->second.previous_marker_id != -1))
-    {
-      any_known_marker_visible = true;
-      markers_[current_marker_id].previous_marker_id = it->first;
-      last_marker_id = it->first;
-    }
+    any_known_marker_visible = true;
+    markers_[current_marker_id].previous_marker_id = lowest_marker_id_;//it->first;
+    last_marker_id = lowest_marker_id_;
   }
 }
 //////////////////////////////////////////////////////////////////////////
@@ -397,7 +395,6 @@ ArucoTracking::computeGlobalMarkerPose(int current_marker_id)
 
     std::stringstream marker_tf_name;
     marker_tf_name << "marker_" << current_marker_id;
-
     listener_->waitForTransform("world",marker_tf_name.str(),ros::Time(0),
                                 ros::Duration(WAIT_FOR_TRANSFORM_INTERVAL));
     try
@@ -650,6 +647,7 @@ ArucoTracking::publishTfs(bool world_option)
     // Actual Marker
     std::stringstream marker_tf_id;
     marker_tf_id << "marker_" << i;
+
     // Older marker - or World
     std::stringstream marker_tf_id_old;
     if(i == lowest_marker_id_)
