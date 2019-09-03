@@ -150,8 +150,6 @@ private:
 
   aruco::CameraParameters aruco_calib_params_;
 
-  int global_marker_counter_;
-  int global_marker_counter_previous_;
   int closest_camera_index_;
   int lowest_marker_id_;
   bool first_marker_detected_;
